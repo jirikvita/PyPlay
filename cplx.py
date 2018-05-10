@@ -13,12 +13,16 @@ gEpsilon = 1e-10
 
 
 class Complex:
+    # old original idea:
     #def __init__(self, re = 0., im = 0.):
     #    self._re = re
     #    self._im = im
     #    self._r = 0.
     #    self._phi = 0.
     #    self.ComputePolar()
+
+    # init function with variable-lengt arguments can be used
+    # to effectivelly overload it:
     def __init__(self, *args):
         if len(args) == 1:
             # expect initiation by an instance of Complex
@@ -78,10 +82,7 @@ class Complex:
         self.ComputePolar()
 
     def MakeR(self):
-        return sqrt (pow(self._re, 2) + pow(self._im, 2) )
-    def ComputePolar(self):
-        self._r = self.MakeR()
-        self._phi = self.MakePhi()
+        return sqrt( pow(self._re, 2) + pow(self._im, 2) )
     def MakePhi(self):
         # to keep phi in (0, pi)
         phi = 0.
@@ -97,6 +98,9 @@ class Complex:
         if phi < 0:
             phi = 2*pi + phi
         return phi
+    def ComputePolar(self):
+        self._r = self.MakeR()
+        self._phi = self.MakePhi()
 
     def ComputeReIm(self):
         self._re = self._r*cos(self._phi)
