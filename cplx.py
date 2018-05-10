@@ -73,6 +73,7 @@ class Complex:
         self._r = sqrt (pow(self._re, 2) + pow(self._im, 2) )
         self._phi = self.MakePhi()
     def MakePhi(self):
+        # to keep phi in (0, pi)
         phi = 0.
         if fabs(self._re) > gEpsilon:
             phi = atan(self._im / self._re)
@@ -83,6 +84,8 @@ class Complex:
                 phi = -pi/2.
         if (self.Re() < -gEpsilon and phi < 0.) or (self.Re() < -gEpsilon and phi > 0.):
             phi = phi + pi
+        if phi < 0:
+            phi = 2*pi + phi
         return phi
 
     def ComputeReIm(self):
