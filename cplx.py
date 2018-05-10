@@ -39,6 +39,14 @@ class Complex:
         self._re = z.Re()
         self._im = z.Im()
         self.ComputePolar()
+    def SetReIm(self, re, im):
+        self._re = re
+        self._im = im
+        self.ComputePolar()
+    def SetRPhi(self, r, phi):
+        self._r = fabs(r)
+        self._phi = phi
+        self.ComputeReIm()
     def Re(self):
         return self._re
     def Im(self):
@@ -55,7 +63,7 @@ class Complex:
         self._im = im
         self.ComputePolar()
     def SetR(self, r):
-        self._r = r
+        self._r = fabs(r)
         self.ComputeReIm()
     def SetPhi(self, phi):
         self._phi = phi
@@ -69,8 +77,10 @@ class Complex:
         self.im = -1.*self._im
         self.ComputePolar()
 
+    def MakeR(self):
+        return sqrt (pow(self._re, 2) + pow(self._im, 2) )
     def ComputePolar(self):
-        self._r = sqrt (pow(self._re, 2) + pow(self._im, 2) )
+        self._r = self.MakeR()
         self._phi = self.MakePhi()
     def MakePhi(self):
         # to keep phi in (0, pi)

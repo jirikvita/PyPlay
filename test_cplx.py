@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # jk 10.5.2018
+from math import pi, sqrt
 
 from cplx import Complex
 print('----------------')
@@ -7,6 +8,13 @@ print('----------------')
 z = Complex()
 z.PrintPretty()
 z.Divide(z)
+print('--- Set re,im,r,phi ---')
+z.SetReIm(-1./sqrt(2.), -1./sqrt(2.))
+z.PrintPretty()
+z.PrintReIm()
+z.SetRPhi(1., 5/4.*pi)
+z.PrintPretty()
+z.PrintReIm()
 print('----------------')
 z0 = Complex(0., 1.)
 z0.PrintReIm()
