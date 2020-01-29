@@ -15,10 +15,9 @@ stuff = []
 def MakeAttractors(world):
     attractors = []
     # some manually placed attractors
-    sx = (world.GetXmax() - world.GetXmin()) / 2
-    sy = (world.GetYmax() - world.GetYmin()) / 2
-    attractors.append(cattractor(sx, sy, 200, 5))
-    attractors.append(cattractor(world.GetXmax()/2, world.GetYmax()/2, 500, 10))
+    sx = (world.GetXmax() + world.GetXmin()) / 2.
+    sy = (world.GetYmax() + world.GetYmin()) / 2.
+    attractors.append(cattractor(sx, sy, 10, 4))
     return attractors
 
 #########################################
@@ -34,10 +33,11 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
         status = gHealthy
         if rand.Uniform(0,1) < params.GetInitialSickFraction():
           status = gSick
-        
-        family.append(cperson(id, age, x, y, attractors, status))
-
-    return family
+        # TODO!
+        # randomize attractors for family members!
+        family.append(cperson(id, age, x, y, attractors, status, 0, 0, 0))
+    Family = cfamily(family, x, y)
+    return Family
 
 #########################################
 def MakeRandomXY(world):
@@ -51,8 +51,8 @@ def MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax
     families = []
     for i in xrange(0, Nfamilies):
         x,y = MakeRandomXY(world)
-        family = MakeFamily(world, attractors, params, x, y, nAverInFamily)
-        families.append(family)
+        Family = MakeFamily(world, attractors, params, x, y, nAverInFamily)
+        families.append(Family)
     return families
 
 #########################################
@@ -66,10 +66,31 @@ def EnsureReality(world, x, y):
   EnsureIndividual(y, world.GetYmin(), world.GetYmax())
   return
 #########################################
-def MovePerson(world, person):
+def MovePerson(world, family, person):
+    # random move
     rand = world.GetRand()
     x = person.GetX() + rand.Uniform(-world.GetRandSpeedX(), world.GetRandSpeedX())
     y = person.GetY() + rand.Uniform(-world.GetRandSpeedY(), world.GetRandSpeedY())
+
+    # move to the current first attractor
+    # get the destintion coordinates and compute vector to move along. This could be cached in future, as is used the full day?
+    destX = 0
+    destY = 0
+    if world.GetAttractorIndex()[0] == 0:
+        destX = person.GetAttractors()[world.GetAttractorIndex()[0]].GetX()
+        destY = person.GetAttractors()[world.GetAttractorIndex()[0]].GetY()
+    else:
+        destX = family.GetX0()
+        destY = family.GetY0()
+    vect = [destX - x, destY - y]
+    # check whether in effective radious of the attractor
+    speed = 0
+    if world.GetAttractorIndex()[0] == 0 and pow(vect[0], 2) + pow(vect[1], 2) <  pow(person.GetAttractors()[world.GetAttractorIndex()[0]].GetStrength(), 2):
+        speed =  person.GetAttractors()[world.GetAttractorIndex()[0]].GetStrength()
+    else:
+        speed = 1
+    x = x + vect[0]*world.GetRandSpeedX()*speed
+    y = y + vect[1]*world.GetRandSpeedY()*speed
     EnsureReality(world, x,y)
     person.SetXY(x,y)
     return
@@ -78,31 +99,40 @@ def MovePerson(world, person):
 def MakeStep(world, families, attractors, params):
   rand = world.GetRand()
   for family in families:
-        for mem in family:
-          # move
-          # check distances, spread from sick families
-          # let live or let die!
-          # TODO!
-          # if sick, check distances to all other people
+        for mem in family.GetMembers():
+          # reverse the search, and for many sick people search around the healthy ones for sick!
+          # actually, make a triangular search (compute indices or rather use xrange?) and check both options;)
+          for otherfam in families:
+              for othermem in otherfam.GetMembers():
+                  # rely on the ordering!
+                  if othermem.GetId() >= mem.GetId():
+                      # can't interact with oneself;-)
+                      # avoid double checks
+                      continue
+                  if mem.GetStatus() == gHealthy:
+                      if othermem.GetStatus() == gSick:
+                          distance = ComputeDistance(mem, othermem)
+                          if distance < params.GetSpreadRadius():
+                              if rand.Uniform(0,1) < params.GetSpreadFrequency():
+                                  mem.SetStatus(gSick)
 
-          if mem.GetStatus() == gSick:
-            # and randomly infect
-            for otherfam in families:
-              for othermem in otherfam:
-                if othermem.GetId() == mem.GetId():
-                  continue
-                distance = ComputeDistance(mem, othermem)
-                if distance < params.GetSpreadRadius():
-                  if rand.Uniform(0,1) < params.GetSpreadFrequency():
-                    othermem.SetStatus(gSick)
+                  elif mem.GetStatus() == gSick:
+                      # and randomly infect
+                      if othermem.GetStatus() != gHealthy:
+                          # can infect only healty people;-)
+                          continue
+                      distance = ComputeDistance(mem, othermem)
+                      if distance < params.GetSpreadRadius():
+                          if rand.Uniform(0,1) < params.GetSpreadFrequency():
+                              othermem.SetStatus(gSick)
                   
-            # randomly die:
-            if rand.Uniform(0,1) < params.GetDieProb():
-              mem.SetStatus(gDead)
+          # randomly die:
+          if rand.Uniform(0,1) < params.GetDieProb():
+             mem.SetStatus(gDead)
             
           # dead person does not move...
           if mem.GetStatus() != gDead:
-            MovePerson(world, mem)
+            MovePerson(world, family, mem)
           pass
   world.IncStep()
   return
@@ -117,9 +147,15 @@ def ShowWorld(world):
 def DrawPerson(world, mem):
     world.GetCan().cd()
     mark = ROOT.TMarker(mem.GetX(), mem.GetY(), world.GetMarks()[mem.GetStatus()])
+    
+    # add marker into cperson, and create it only for day and step 0
+    # do not create it every time!
+
     mark.SetNDC()
     mark.SetMarkerColor(world.GetCols()[mem.GetStatus()])
-    mark.SetMarkerSize(1)
+    mark.SetMarkerSize(0.5)
+    if mem.GetStatus() == gDead:
+      mark.SetMarkerSize(1.)
     mark.Draw()
     #print('drawing member {:},{:}'.format(mem.GetX(), mem.GetY()))
     return mark
@@ -128,7 +164,7 @@ def DrawPerson(world, mem):
 def DrawFamilies(world, families):
   marks = []
   for family in families:
-    for member in family:
+    for member in family.GetMembers():
       marks.append(DrawPerson(world, member))
   return marks
 
@@ -196,20 +232,47 @@ def main(argv):
     ymax = 1
     randSpeedX = 0.02
     randSpeedY = 0.02
-    cols = { gHealthy : ROOT.kBlack, gSick : ROOT.kBlue, gSuperSpreader : ROOT.kGreen + 2, gDead : ROOT.kRed}
-    marks = { gHealthy : 20, gSick : 21, gSuperSpreader : 29, gDead : 34}
-    world = cworld(can, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, cols, marks)
+    cols = { gHealthy : ROOT.kBlack,
+             gSick : ROOT.kGreen+2,
+             gSuperSpreader : ROOT.kGreen + 2,
+             gDead : ROOT.kRed,
+             gInfected : ROOT.kAzure + 7,
+             gHealed : ROOT.kBlack}
+    marks = { gHealthy : 20,
+              gSick : 21,
+              gSuperSpreader : 29,
+              gDead : 34,
+              gInfected : 20,
+              gHealed : 24}
+    # attractor indices [0,1] symbolize home and world
+    world = cworld(can, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, cols, marks, [0, 1])
 
     attractors = MakeAttractors(world)
     
-    # ?! tau = 5
+
     spreadFrequency = 0.01 # transmission prob. per encounter within radius
-    # TO USE!!!
+    # TODO:
     # define gInfected
+    # add ndays sick to cperson!
+    # add exponencial die prob!
+    # tau = 5
+    # add heal probability after some steps
+    # tauheal = 
+    # TO USE!!!
     incubationTime = 7 # days
+
+    # later: enable mutations, heal from certain stem, but can be infected by a new one
+    # pads, histograms, age, die prob. age dependent...
+    # also control histos of how long people were infectious, sick, healthy before getting sick
+    # allow treatment from some day in some areas?
+    # game-like interaction character?;-)
+    # initial infection random, but only in certain area
+    # attraction indices of work/school based on age? ;-)
+    
+    
     getWellTime = 14
-    dieProb = 0.05
-    spreadRadius = 0.08 
+    dieProb = 0.02
+    spreadRadius = 0.09 
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.02
     params = cparams(spreadFrequency, spreadRadius, dieProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction)
@@ -220,7 +283,7 @@ def main(argv):
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
     
-    nDays = 5 # 30
+    nDays = 4 # 30
     for day in range(0, nDays):
         nTimeSteps = 10
         world.SetStep(0)
@@ -229,7 +292,7 @@ def main(argv):
             Draw(world, families)
             world.PrintStatus(families)
             world.IncStep()
-        world.IncDay()
+        world.IncDay(families)
 
     ROOT.gApplication.Run()
     print ('DONE!;-)')
