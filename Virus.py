@@ -71,7 +71,7 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
         # TODO: randomize x, y within family members
         status = gHealthy
         if rand.Uniform(0,1) < params.GetInitialSickFraction():
-          status = gSick
+          status = gInfected
         # TODO!
         # randomize attractors for family members!
         randx = rand.Uniform(0., 1.)
@@ -167,31 +167,37 @@ def MakeStep(world, families, attractors, params):
                           distance = ComputeDistance(mem, othermem)
                           if distance < params.GetSpreadRadius():
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
-                                  mem.SetStatus(gSick)
+                                  mem.SetStatus(gInfected)
 
                   elif mem.GetStatus() == gSick:
                       # and randomly infect
-                      if othermem.GetStatus() != gHealthy:
-                          # can infect only healty people;-)
-                          continue
-                      distance = ComputeDistance(mem, othermem)
-                      if distance < params.GetSpreadRadius():
-                          if rand.Uniform(0,1) < params.GetSpreadFrequency():
-                              othermem.SetStatus(gSick)
+                      if othermem.GetStatus() == gHealthy:
+                          # can infect only healthy people;-)
+                          distance = ComputeDistance(mem, othermem)
+                          if distance < params.GetSpreadRadius():
+                              if rand.Uniform(0,1) < params.GetSpreadFrequency():
+                                  othermem.SetStatus(gInfected)
                   
-          # randomly die:
-          if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
-             mem.SetStatus(gDead)
-          # randomly heal:
-          if rand.Uniform(0,1) < params.GetHealProb():
-             mem.SetStatus(gHealed)
+                      # try randomly die:
+                      if rand.Uniform(0,1) < params.GetDeathProb(): #*params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge():
+                          mem.SetStatus(gDead)
+                          # try randomly heal:
+                      elif rand.Uniform(0,1) < params.GetHealProb():
+                          mem.SetStatus(gHealed)
 
+                  elif mem.GetStatus() == gInfected:
+                      # randomly get sick from infected
+                      tau = params.GetIncubationTime()
+                      #if rand.Uniform(0,1) > 1./tau*exp(-world.GetDay() / tau):
+                      if rand.Uniform(0,1) < 0.00002:
+                          mem.SetStatus(gSick)
+
+             
              
           # dead person does not move...
           if mem.GetStatus() != gDead:
             MovePerson(world, family, mem)
           pass
-  world.FillHistos(families)
   return
 
 
@@ -359,7 +365,6 @@ def main(argv):
 
     attractors = MakeAttractors(world)
 
-    spreadFrequency = 0.002 # transmission prob. per encounter within radius
     # TODO:
     # define gInfected
     # add ndays sick to cperson!
@@ -380,15 +385,16 @@ def main(argv):
     # exp() param
     getWellTime = 2
     maxDaysSick = 4
-    # TO USE!!!
-    incubationTime = 0.5 # days
 
-    healProb = 0.0005
-    deathProb = 0.001
+    incubationTime = 1002 # days
 
-    spreadRadius = 0.04*gkm
+    healProb  = 0.0000005
+    deathProb = 0.000002 # per step
+
+    spreadFrequency = 0.025 # transmission prob. per encounter within radius
+    spreadRadius = 0.025*gkm
     superSpreadFraction = 0.01 # out of sick
-    initialSickFraction = 0.02
+    initialSickFraction = 0.05
     ageDeathFact = 0.3
 
     # affect people speed by age?
@@ -399,7 +405,7 @@ def main(argv):
     nAverInFamily = 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
-    nDays = 3 # 30
+    nDays = 6 # 30
     nTimeSteps = 172
 
     #########
@@ -409,9 +415,10 @@ def main(argv):
     for day in xrange(0, nDays):
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
-            MakeStep(world, families, attractors, params)
+            world.FillHistos(families)
             Draw(world, families, attractors)
             world.PrintStatus(families)
+            MakeStep(world, families, attractors, params)
             world.IncStep()
         world.IncDay(families)
 
