@@ -3,16 +3,16 @@
 from __future__ import print_function
 
 cname = 'cparams'
-members = ['spreadFrequency', 'spreadRadius', 'dieProb', 'getWellTime', 'incubationTime', 'superSpreadFraction', 'initialSickFraction', 'maxDaysSick']
+members = ['spreadFrequency', 'spreadRadius', 'dieProb', 'healProb', 'getWellTime', 'incubationTime', 'superSpreadFraction', 'initialSickFraction', 'maxDaysSick']
 
 #cname = 'cattractor'
-#members = ['x', 'y', 'radius', 'strength']
+#members = ['x', 'y', 'rmin', 'rmax', 'strength']
 
 #cname = 'cperson'
 #members = ['id', 'age', 'x', 'y', 'attractors', 'status', 'sickDays', 'healed', 'nDaysInStatus']
 
-cname = 'cworld'
-members = ['can', 'day', 'step', 'xmin', 'xmax', 'ymin', 'ymax', 'nPeople', 'rand', 'randSpeedX', 'randSpeedY', 'cols', 'marks', 'attractorIndex']
+#cname = 'cworld'
+#members = ['can', 'day', 'step', 'xmin', 'xmax', 'ymin', 'ymax', 'nPeople', 'rand', 'randSpeedX', 'randSpeedY', 'cols', 'marks', 'attractorIndex']
 
 #cname = 'cfamily'
 #members = ['members', 'x0', 'y0']

@@ -12,12 +12,37 @@ stuff = []
 
 
 #########################################
+def MakeDigitStr(i, digits = 4):
+    # from /home/qitek/Dropbox/work/Vyuka/SFVE/Poznamky_Cz/Toys/PeakSim/PeakSim.py
+    tag = str(i)
+    n = digits
+    try: 
+        n = int(log10(i))
+    except ValueError:
+        pass
+    if i is 0:
+        n = 0
+    for i in range(0, digits - n):
+        tag = '0' + tag
+    return tag
+
+
+#########################################
 def MakeAttractors(world):
     attractors = []
     # some manually placed attractors
+    # center:
     sx = (world.GetXmax() + world.GetXmin()) / 2.
     sy = (world.GetYmax() + world.GetYmin()) / 2.
-    attractors.append(cattractor(sx, sy, 10, 4))
+    # halfwidths:
+    hwx = (world.GetXmax() - world.GetXmin()) / 2.
+    hwy = (world.GetYmax() - world.GetYmin()) / 2.
+    rmin = 0.02
+    rmax = 10 # exceeds the world radius
+    speed = 2 # exceeding factor over random walk speed
+    sf = 0.55 # scale factor
+    attractors.append(cattractor(sx-sf*hwx, sy-sf*hwy, rmin, rmax, speed))
+    attractors.append(cattractor(sx+sf*hwx, sy+sf*hwy, rmin, rmax, speed))
     return attractors
 
 #########################################
@@ -35,7 +60,12 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
           status = gSick
         # TODO!
         # randomize attractors for family members!
-        family.append(cperson(id, age, x, y, attractors, status, 0, 0, 0))
+        randx = rand.Uniform(0., 1.)
+        randi = 0
+        if randx > 0.5:
+            randi = 1
+        # so far support only one attractor per person in a list
+        family.append(cperson(id, age, x, y, [attractors[randi]], status, 0, 0, 0))
     Family = cfamily(family, x, y)
     return Family
 
@@ -72,21 +102,28 @@ def MovePerson(world, family, person):
     x = person.GetX() + rand.Uniform(-world.GetRandSpeedX(), world.GetRandSpeedX())
     y = person.GetY() + rand.Uniform(-world.GetRandSpeedY(), world.GetRandSpeedY())
 
-    # move to the current first attractor
-    # get the destintion coordinates and compute vector to move along. This could be cached in future, as is used the full day?
+    # move to the current attractor
+    # get the destintion coordinates and compute vector to move along
     destX = 0
     destY = 0
     if world.GetAttractorIndex()[0] == 0:
-        destX = person.GetAttractors()[world.GetAttractorIndex()[0]].GetX()
-        destY = person.GetAttractors()[world.GetAttractorIndex()[0]].GetY()
+        # go to the attractor
+        destX = person.GetAttractors()[0].GetX() # ? world.GetAttractorIndex()[0]
+        destY = person.GetAttractors()[0].GetY()
     else:
+        # go home
         destX = family.GetX0()
         destY = family.GetY0()
     vect = [destX - x, destY - y]
     # check whether in effective radious of the attractor
     speed = 0
-    if world.GetAttractorIndex()[0] == 0 and pow(vect[0], 2) + pow(vect[1], 2) <  pow(person.GetAttractors()[world.GetAttractorIndex()[0]].GetStrength(), 2):
-        speed =  person.GetAttractors()[world.GetAttractorIndex()[0]].GetStrength()
+    r2 = pow(vect[0], 2) + pow(vect[1], 2)
+    if world.GetAttractorIndex()[0] == 0:
+        if r2 < pow(person.GetAttractors()[0].GetRmax(), 2)\
+           and r2 > pow(person.GetAttractors()[0].GetRmin(), 2):
+             speed =  person.GetAttractors()[0].GetStrength()
+        else:
+            speed = 0
     else:
         speed = 1
     x = x + vect[0]*world.GetRandSpeedX()*speed
@@ -129,19 +166,30 @@ def MakeStep(world, families, attractors, params):
           # randomly die:
           if rand.Uniform(0,1) < params.GetDieProb():
              mem.SetStatus(gDead)
-            
+          # randomly heal:
+          if rand.Uniform(0,1) < params.GetHealProb():
+             mem.SetStatus(gHealed)
+
+             
           # dead person does not move...
           if mem.GetStatus() != gDead:
             MovePerson(world, family, mem)
           pass
-  world.IncStep()
+  #world.IncStep()
   return
 
 
 #########################################
-def ShowWorld(world):
+def ShowWorld(world, attractors):
   world.GetCan().Draw()
-  return
+  for attractor in attractors:
+      circ = ROOT.TEllipse(attractor.GetX(), attractor.GetY(), attractor.GetRmin())
+      circ.SetLineStyle(2)
+      circ.SetLineWidth(4)
+      circ.SetLineColor(ROOT.kMagenta)
+      circ.Draw()
+      stuff.append(circ)
+  return stuff
 
 #########################################
 def DrawPerson(world, mem):
@@ -169,10 +217,26 @@ def DrawFamilies(world, families):
   return marks
 
 #########################################
-def Draw(world, families):
-    ShowWorld(world)
+def Draw(world, families, attractors):
+    ShowWorld(world, attractors)
     marks = DrawFamilies(world, families)
-    world.GetCan().Print(world.GetCan().GetName() + '_day{:}_step{:}.png'.format(world.GetDay(), world.GetStep()))
+    sday = MakeDigitStr(world.GetDay(),2)
+    sstep = MakeDigitStr(world.GetStep(),2)
+    sss = 'day {:} step {:}'.format(sday, sstep)
+    txt = ROOT.TLatex(0.02, 0.96, sss)
+    txt.SetTextSize(0.03)
+    txt.SetNDC()
+    txt.SetTextColor(ROOT.kBlue)
+    txt.Draw()
+    status = world.GetStatusStr(families)
+    wtxt = ROOT.TLatex(0.02, 0.02, status)
+    wtxt.SetTextSize(0.03)
+    wtxt.SetNDC()
+    wtxt.SetTextColor(ROOT.kBlue)
+    wtxt.Draw()
+    
+    #stuff.append(txt)
+    world.GetCan().Print(world.GetCan().GetName() + '_day{:}_step{:}.png'.format(sday, sstep))
     return
 
 ##########################################
@@ -218,7 +282,7 @@ def main(argv):
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
     canname = 'world'
-    can = ROOT.TCanvas(canname, canname)
+    can = ROOT.TCanvas(canname, canname, 0, 0, 800, 800)
     cans.append(can)
 
     # day, night
@@ -230,8 +294,8 @@ def main(argv):
     xmax = 1
     ymin = 0
     ymax = 1
-    randSpeedX = 0.02
-    randSpeedY = 0.02
+    randSpeedX = 0.005
+    randSpeedY = 0.005
     cols = { gHealthy : ROOT.kBlack,
              gSick : ROOT.kGreen+2,
              gSuperSpreader : ROOT.kGreen + 2,
@@ -250,7 +314,7 @@ def main(argv):
     attractors = MakeAttractors(world)
     
 
-    spreadFrequency = 0.01 # transmission prob. per encounter within radius
+    spreadFrequency = 0.002 # transmission prob. per encounter within radius
     # TODO:
     # define gInfected
     # add ndays sick to cperson!
@@ -269,13 +333,17 @@ def main(argv):
     # initial infection random, but only in certain area
     # attraction indices of work/school based on age? ;-)
     
-    
-    getWellTime = 14
-    dieProb = 0.02
-    spreadRadius = 0.09 
+    # TO USE!!!
+    getWellTime = 4
+    maxDaysSick = 6
+
+    healProb = 0.0005
+    dieProb = 0.0015
+
+    spreadRadius = 0.04 
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.02
-    params = cparams(spreadFrequency, spreadRadius, dieProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction)
+    params = cparams(spreadFrequency, spreadRadius, dieProb, healProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction, maxDaysSick)
 
     
     Nfamilies = 500
@@ -284,12 +352,12 @@ def main(argv):
 
     
     nDays = 4 # 30
-    for day in range(0, nDays):
-        nTimeSteps = 10
+    for day in xrange(0, nDays):
+        nTimeSteps = 128
         world.SetStep(0)
-        for it in range(nTimeSteps):
+        for it in xrange(0, nTimeSteps):
             MakeStep(world, families, attractors, params)
-            Draw(world, families)
+            Draw(world, families, attractors)
             world.PrintStatus(families)
             world.IncStep()
         world.IncDay(families)
