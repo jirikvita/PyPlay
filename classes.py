@@ -151,11 +151,16 @@ class cworld:
       print('day {} step {} '.format(self._day, self._step,) + sstr)
 
   def FillHistos(self, families):
-      setMax = False
-      if self._histos['age'].GetEntries() > 0:
-          ageMax = self._histos['age'].GetMaximum()
-          setMax = True
+      ##setMax = False
+      #for key in self._histos:
+      #    val = self._histos[key].GetMaximum()
+      #    if val > ymax:
+      #        ymax = val
+      #if self._histos['age'].GetEntries() > 0:
+      #    ageMax = self._histos['age'].GetMaximum()
+      #    setMax = True
       for key in self._histos:
+          if key == 'iage': continue
           self._histos[key].Reset()
       counts = {}
       for key in self._histos:
@@ -167,14 +172,19 @@ class cworld:
               if key != gDead:
                   self._histos['age'].Fill(mem.GetAge())
       for ikey in gKeys:
-          print('ikey={}'.format(ikey))
+          #print('ikey={}'.format(ikey))
           #self._histos[key].Fill(key, counts[key])
           for hkey in self._histos:
-              print('hkey={}'.format(hkey))
+              #print('hkey={}'.format(hkey))
               if ikey == hkey:
                   self._histos[hkey].SetBinContent(ikey+1, counts[hkey])
-      if setMax:
-          self._histos['age'].SetMaximum(ageMax)  
+      #if setMax:
+      #    self._histos['age'].SetMaximum(ageMax)
+      ymax = self._nPeople
+      for key in self._histos:
+         if key == 'age' or key == 'iage':
+             continue
+         self._histos[key].SetMaximum(ymax)
 
   #########################################
 class cparams:

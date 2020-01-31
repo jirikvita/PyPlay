@@ -63,6 +63,5 @@ def MakePads(can, ratio_size = 0.35, PadSeparation = 0.0, UpperPadBottomMargin =
     #pad2.SetBorderSize(1)
     #pad2.SetFillColor(ROOT.kGray)
     pad2.Draw()
-    
-             
+
     return padMain,pad1,pad2

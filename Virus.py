@@ -22,9 +22,13 @@ def MakeHistos():
         histo = ROOT.TH1D(name, title, n, 0, n)
         histo.SetFillColor(gCols[key])
         histo.SetStats(0)
-        for i in xrange(0,n):
-            histo.GetXaxis().SetBinLabel(i+1, gKeyNames[key])
         histos[key] = histo
+
+    for key in gKeys:
+        histo = histos[key]
+        for key2 in gKeys:
+            print('Setting bin {:} label to {:}'.format(key2+1, gKeyNames[key2]))
+            histo.GetXaxis().SetBinLabel(key2+1, gKeyNames[key2])
     name = 'h_age'
     title = ';age;people'
     n = 40
@@ -59,9 +63,9 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
     rand = world.GetRand()
     for im in range(0, rand.Poisson(nAverInFamily)):
         id = world.YieldNewId()
-        age = rand.Gaus(35, 15)
-        if age < 0:
-            age = 1
+        age = -1
+        while age <= 0:
+            age = rand.Gaus(35, 15)
         if age > params.GetMaxAge():
             age = params.GetMaxAge()
         # TODO: randomize x, y within family members
@@ -194,6 +198,7 @@ def MakeStep(world, families, attractors, params):
 #########################################
 def ShowWorld(world, attractors):
   world.GetCan()[0].Draw()
+  world.GetCan()[1].cd()
   for attractor in attractors:
       # scaling to NDC?
       circ = ROOT.TEllipse(attractor.GetX(), attractor.GetY(), attractor.GetRmin())
@@ -204,13 +209,22 @@ def ShowWorld(world, attractors):
       stuff.append(circ)
   # draw age
   world.GetCan()[3].cd()
-  world.GetHistos()['age'].Draw('bar')
-
+  if world.GetDay() == 0 and world.GetStep() == 0:
+      Age_h = world.GetHistos()['age']
+      cloneAge_h = Age_h.Clone('age_h_initial')
+      cloneAge_h.SetLineColor(Age_h.GetFillColor())
+      cloneAge_h.SetFillColor(0)
+      cloneAge_h.SetFillStyle(0)
+      print('Initial age mean: {:}'.format(cloneAge_h.GetMean()))
+      world.GetHistos()['iage'] = cloneAge_h
+  world.GetHistos()['iage'].Draw('hist')
+  world.GetHistos()['age'].Draw('histsame')
+  
   # draw counts
   world.GetCan()[2].cd()
   sameopt = ''
   for key in world.GetHistos():
-      if key == 'age':
+      if key == 'age' or key == 'iage':
           continue
       histo = world.GetHistos()[key]
       histo.Draw('hbar' + sameopt)
@@ -370,12 +384,12 @@ def main(argv):
     incubationTime = 0.5 # days
 
     healProb = 0.0005
-    deathProb = 0.0015
+    deathProb = 0.001
 
     spreadRadius = 0.04*gkm
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.02
-    ageDeathFact = 0.1
+    ageDeathFact = 0.3
 
     # affect people speed by age?
     
@@ -401,8 +415,9 @@ def main(argv):
             world.IncStep()
         world.IncDay(families)
 
-    ROOT.gApplication.Run()
     print ('DONE!;-)')
+    ROOT.gApplication.Run()
+
     return
 #########################################
 #########################################
