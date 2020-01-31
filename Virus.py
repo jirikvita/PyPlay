@@ -6,27 +6,35 @@ import ROOT
 import os, sys, getopt
 
 from classes import *
-
-cans = []
-stuff = []
+from Tools import *
 
 
 #########################################
-def MakeDigitStr(i, digits = 4):
-    # from /home/qitek/Dropbox/work/Vyuka/SFVE/Poznamky_Cz/Toys/PeakSim/PeakSim.py
-    tag = str(i)
-    n = digits
-    try: 
-        n = int(log10(i))
-    except ValueError:
-        pass
-    if i is 0:
-        n = 0
-    for i in range(0, digits - n):
-        tag = '0' + tag
-    return tag
-
-
+def MakeHistos():
+    histos = {}
+    # prepare hsitograms of different color
+    # where each will have only one non-zero bin filled with the number of people in each category
+    # need also to add the age histo! TODO
+    n = len(gKeys)
+    for key in gKeys:
+        name = 'h_{:}'.format(gKeyNames[key])
+        title = ';;people'
+        histo = ROOT.TH1D(name, title, n, 0, n)
+        histo.SetFillColor(gCols[key])
+        histo.SetStats(0)
+        for i in xrange(0,n):
+            histo.GetXaxis().SetBinLabel(i+1, gKeyNames[key])
+        histos[key] = histo
+    name = 'h_age'
+    title = ';age;people'
+    n = 40
+    histo = ROOT.TH1D(name, title, n, 0, gmaxAge)
+    histo.SetFillColor(gCols[key])
+    histo.SetFillColor(ROOT.kBlue)
+    histo.SetStats(0)
+    histos['age'] = histo
+    return histos
+    
 #########################################
 def MakeAttractors(world):
     attractors = []
@@ -37,8 +45,8 @@ def MakeAttractors(world):
     # halfwidths:
     hwx = (world.GetXmax() - world.GetXmin()) / 2.
     hwy = (world.GetYmax() - world.GetYmin()) / 2.
-    rmin = 0.02
-    rmax = 10 # exceeds the world radius
+    rmin = 0.02*gkm
+    rmax = 10*gkm # exceeds the world radius, attractor works for all practical distances
     speed = 2 # exceeding factor over random walk speed
     sf = 0.55 # scale factor
     attractors.append(cattractor(sx-sf*hwx, sy-sf*hwy, rmin, rmax, speed))
@@ -54,6 +62,8 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
         age = rand.Gaus(35, 15)
         if age < 0:
             age = 1
+        if age > params.GetMaxAge():
+            age = params.GetMaxAge()
         # TODO: randomize x, y within family members
         status = gHealthy
         if rand.Uniform(0,1) < params.GetInitialSickFraction():
@@ -90,11 +100,13 @@ def EnsureIndividual(x, xmin, xmax):
   if x < xmin: x = xmin
   if x > xmax: x = xmax
   return
+
 #########################################
 def EnsureReality(world, x, y):
   EnsureIndividual(x, world.GetXmin(), world.GetXmax())
   EnsureIndividual(y, world.GetYmin(), world.GetYmax())
   return
+
 #########################################
 def MovePerson(world, family, person):
     # random move
@@ -164,7 +176,7 @@ def MakeStep(world, families, attractors, params):
                               othermem.SetStatus(gSick)
                   
           # randomly die:
-          if rand.Uniform(0,1) < params.GetDieProb():
+          if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
              mem.SetStatus(gDead)
           # randomly heal:
           if rand.Uniform(0,1) < params.GetHealProb():
@@ -175,25 +187,40 @@ def MakeStep(world, families, attractors, params):
           if mem.GetStatus() != gDead:
             MovePerson(world, family, mem)
           pass
-  #world.IncStep()
+  world.FillHistos(families)
   return
 
 
 #########################################
 def ShowWorld(world, attractors):
-  world.GetCan().Draw()
+  world.GetCan()[0].Draw()
   for attractor in attractors:
+      # scaling to NDC?
       circ = ROOT.TEllipse(attractor.GetX(), attractor.GetY(), attractor.GetRmin())
       circ.SetLineStyle(2)
       circ.SetLineWidth(4)
       circ.SetLineColor(ROOT.kMagenta)
       circ.Draw()
       stuff.append(circ)
+  # draw age
+  world.GetCan()[3].cd()
+  world.GetHistos()['age'].Draw('bar')
+
+  # draw counts
+  world.GetCan()[2].cd()
+  sameopt = ''
+  for key in world.GetHistos():
+      if key == 'age':
+          continue
+      histo = world.GetHistos()[key]
+      histo.Draw('hbar' + sameopt)
+      sameopt = 'same'
   return stuff
 
 #########################################
 def DrawPerson(world, mem):
-    world.GetCan().cd()
+    world.GetCan()[1].cd()
+    # scaling to NDC?
     mark = ROOT.TMarker(mem.GetX(), mem.GetY(), world.GetMarks()[mem.GetStatus()])
     
     # add marker into cperson, and create it only for day and step 0
@@ -210,33 +237,41 @@ def DrawPerson(world, mem):
 
 #########################################
 def DrawFamilies(world, families):
-  marks = []
+  markers = []
   for family in families:
     for member in family.GetMembers():
-      marks.append(DrawPerson(world, member))
-  return marks
+      markers.append(DrawPerson(world, member))
+  return markers
 
 #########################################
 def Draw(world, families, attractors):
+
     ShowWorld(world, attractors)
-    marks = DrawFamilies(world, families)
+
+    # hm, memory grow...?
+    markers = DrawFamilies(world, families)
+    
     sday = MakeDigitStr(world.GetDay(),2)
     sstep = MakeDigitStr(world.GetStep(),2)
     sss = 'day {:} step {:}'.format(sday, sstep)
-    txt = ROOT.TLatex(0.02, 0.96, sss)
-    txt.SetTextSize(0.03)
+
+    world.GetCan()[2].cd()
+    txt = ROOT.TLatex(0.12, 0.95, sss)
+    txt.SetTextSize(0.10)
     txt.SetNDC()
     txt.SetTextColor(ROOT.kBlue)
     txt.Draw()
-    status = world.GetStatusStr(families)
-    wtxt = ROOT.TLatex(0.02, 0.02, status)
-    wtxt.SetTextSize(0.03)
-    wtxt.SetNDC()
-    wtxt.SetTextColor(ROOT.kBlue)
-    wtxt.Draw()
+
+    #status = world.GetStatusStr(families)
+    #wtxt = ROOT.TLatex(0.02, 0.02, status)
+    #wtxt.SetTextSize(0.03)
+    #wtxt.SetNDC()
+    #wtxt.SetTextColor(ROOT.kBlue)
+    #wtxt.Draw()
     
     #stuff.append(txt)
-    world.GetCan().Print(world.GetCan().GetName() + '_day{:}_step{:}.png'.format(sday, sstep))
+    world.GetCan()[0].Print(world.GetCan()[0].GetName() + '_day{:}_step{:}.png'.format(sday, sstep))
+    
     return
 
 ##########################################
@@ -281,8 +316,15 @@ def main(argv):
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
 
+
+    ############
+    # Settings #
+    ############
+
     canname = 'world'
-    can = ROOT.TCanvas(canname, canname, 0, 0, 800, 800)
+    canc = ROOT.TCanvas(canname, canname, 0, 0, 800, 600)
+    canMain,pad1,pad2 = MakePads(canc)
+    can = [canc,canMain, pad1, pad2]
     cans.append(can)
 
     # day, night
@@ -290,43 +332,30 @@ def main(argv):
     # incubation time
     # spread frequency, radius
 
-    xmin = 0
-    xmax = 1
-    ymin = 0
-    ymax = 1
-    randSpeedX = 0.005
-    randSpeedY = 0.005
-    cols = { gHealthy : ROOT.kBlack,
-             gSick : ROOT.kGreen+2,
-             gSuperSpreader : ROOT.kGreen + 2,
-             gDead : ROOT.kRed,
-             gInfected : ROOT.kAzure + 7,
-             gHealed : ROOT.kBlack}
-    marks = { gHealthy : 20,
-              gSick : 21,
-              gSuperSpreader : 29,
-              gDead : 34,
-              gInfected : 20,
-              gHealed : 24}
+    xmin = 0.*gkm
+    xmax = 1.*gkm
+    ymin = 0.*gkm
+    ymax = 1.*gkm
+    randSpeedX = 0.005*gkm
+    randSpeedY = 0.005*gkm
+    histos = MakeHistos()
+    
     # attractor indices [0,1] symbolize home and world
-    world = cworld(can, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, cols, marks, [0, 1])
+    world = cworld(can, histos, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, gCols, gMarks, [0, 1])
 
     attractors = MakeAttractors(world)
-    
 
     spreadFrequency = 0.002 # transmission prob. per encounter within radius
     # TODO:
     # define gInfected
     # add ndays sick to cperson!
-    # add exponencial die prob!
+    # add exponencial death prob!
     # tau = 5
     # add heal probability after some steps
     # tauheal = 
-    # TO USE!!!
-    incubationTime = 7 # days
-
+ 
     # later: enable mutations, heal from certain stem, but can be infected by a new one
-    # pads, histograms, age, die prob. age dependent...
+    # pads, histograms, age, death prob. age dependent...
     # also control histos of how long people were infectious, sick, healthy before getting sick
     # allow treatment from some day in some areas?
     # game-like interaction character?;-)
@@ -334,26 +363,36 @@ def main(argv):
     # attraction indices of work/school based on age? ;-)
     
     # TO USE!!!
-    getWellTime = 4
-    maxDaysSick = 6
+    # exp() param
+    getWellTime = 2
+    maxDaysSick = 4
+    # TO USE!!!
+    incubationTime = 0.5 # days
 
     healProb = 0.0005
-    dieProb = 0.0015
+    deathProb = 0.0015
 
-    spreadRadius = 0.04 
+    spreadRadius = 0.04*gkm
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.02
-    params = cparams(spreadFrequency, spreadRadius, dieProb, healProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction, maxDaysSick)
+    ageDeathFact = 0.1
 
+    # affect people speed by age?
     
+    params = cparams(spreadFrequency, spreadRadius, deathProb, healProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction, maxDaysSick, ageDeathFact, gmaxAge)
+
     Nfamilies = 500
     nAverInFamily = 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
+    nDays = 3 # 30
+    nTimeSteps = 172
+
+    #########
+    # LOOP! #
+    #########
     
-    nDays = 4 # 30
     for day in xrange(0, nDays):
-        nTimeSteps = 128
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
             MakeStep(world, families, attractors, params)
