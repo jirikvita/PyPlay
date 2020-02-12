@@ -179,7 +179,7 @@ def MakeStep(world, families, attractors, params):
                                   othermem.SetStatus(gInfected)
                   
                       # try randomly die:
-                      if rand.Uniform(0,1) < params.GetDeathProb(): #*params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge():
+                      if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
                           mem.SetStatus(gDead)
                           # try randomly heal:
                       elif rand.Uniform(0,1) < params.GetHealProb():
@@ -188,8 +188,9 @@ def MakeStep(world, families, attractors, params):
                   elif mem.GetStatus() == gInfected:
                       # randomly get sick from infected
                       tau = params.GetIncubationTime()
+                      # TO FINISH!!!
                       #if rand.Uniform(0,1) > 1./tau*exp(-world.GetDay() / tau):
-                      if rand.Uniform(0,1) < 0.00002:
+                      if rand.Uniform(0,1) < 0.00001:
                           mem.SetStatus(gSick)
 
              
@@ -371,15 +372,31 @@ def main(argv):
     # add exponencial death prob!
     # tau = 5
     # add heal probability after some steps
-    # tauheal = 
- 
+    # tauheal =
+
+    # TODOS:
+    # watch ages histos of each category and plot them, too
+    # keep and the write and plot some summaries
+    # like numbers of all the categories in each day and step!
+    # write this also to a file for further analysis and plotting;-)
+    # TO FINISH the exp. distribution
+    # make some people immune?
+    # FINISH the super spreaders
+    # mark by lines also initial and current mean age
+    
     # later: enable mutations, heal from certain stem, but can be infected by a new one
     # pads, histograms, age, death prob. age dependent...
     # also control histos of how long people were infectious, sick, healthy before getting sick
+    
     # allow treatment from some day in some areas?
-    # game-like interaction character?;-)
+    #    -- increase heal prob. close to some hospital attractor
+    #   -- send a fraction of people to such attractor
+    
+    # click and game-like interaction character?;-)
     # initial infection random, but only in certain area
     # attraction indices of work/school based on age? ;-)
+    # make also the heal prob. age dependent?
+    # create functions for these!
     
     # TO USE!!!
     # exp() param
@@ -389,9 +406,9 @@ def main(argv):
     incubationTime = 1002 # days
 
     healProb  = 0.0000005
-    deathProb = 0.000002 # per step
+    deathProb = 0.00000065 # per step
 
-    spreadFrequency = 0.025 # transmission prob. per encounter within radius
+    spreadFrequency = 0.015 # transmission prob. per encounter within radius
     spreadRadius = 0.025*gkm
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.05
