@@ -12,6 +12,21 @@ cans = []
 stuff = []
 
 #########################################
+def MakeDerivative(gr):
+    dgr = ROOT.TGraph()
+    x1 = ROOT.Double()
+    y1 = ROOT.Double()
+    x2 = ROOT.Double()
+    y2 = ROOT.Double()
+    for i in range(0,gr.GetN()-1):
+        gr.GetPoint(i, x1, y1)
+        gr.GetPoint(i+1, x2, y2)
+        der = (y2-y1) / (x2-x1)
+        x = 0.5*(x1+x2)
+        dgr.SetPoint(i, x, der)
+    return dgr
+
+#########################################
 def MakeDigitStr(i, digits = 4):
     # from /home/qitek/Dropbox/work/Vyuka/SFVE/Poznamky_Cz/Toys/PeakSim/PeakSim.py
     tag = str(i)

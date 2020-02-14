@@ -1,12 +1,16 @@
 #!/usr/bin/python
 # from __future__ import print_function
 import ROOT
+# jk 12.2.2020
+
+from Tools import *
 
 stuff = []
 
 # data from https://www.who.int/emergencies/diseases/novel-coronavirus-2019/situation-reports/
 # date, total cases, deaths total
 # global data
+# cases here are laboratory testes, not clinically
 Data = [ ['20.1.2020', 282, 6],
          ['21.1.2020', 314, 6],
          ['23.1.2020', 581, 17],
@@ -26,9 +30,17 @@ Data = [ ['20.1.2020', 282, 6],
          ['6.2.2020', 28276, 565],
          ['7.2.2020', 31481, 638],
          ['8.2.2020', 34886, 724],
-         ['9.2.2020', 37558, 813],
+         ['9.2.2020', 37558, 813], 
          ['10.2.2020', 40554, 910],
          ['11.2.2020', 43103, 1018],
+         ['12.2.2020', 45171, 1115],
+         ['13.2.2020', 46997, 1369],
+         ['14.2.2020', 49053, 1383],
+         #['.2.2020', , ],
+         #['.2.2020', , ]
+         #['.2.2020', , ]
+         #['.2.2020', , ]
+         #['.2.2020', , ]
 ]
 
 print(Data)
@@ -66,12 +78,27 @@ leg.AddEntry(gr_deaths, 'Global deaths', 'P')
 leg.Draw()
 gr_cases.GetXaxis().SetTitle('WHO report number (~daily)')
 gr_cases.GetYaxis().SetTitle('Counts')
+gr_cases.GetYaxis().SetRangeUser(1., gr_cases.GetYaxis().GetXmax())
 
 can.Print('Coronavirus_liny.png')
 
 ROOT.gPad.SetLogy()
 gr_cases.GetYaxis().SetMoreLogLabels()
 gr_cases.GetYaxis().SetRangeUser(3., gr_cases.GetYaxis().GetXmax()*10.)
+
+dgr_cases = MakeDerivative(gr_cases)
+dgr_cases.SetLineColor(gr_cases.GetLineColor())
+dgr_cases.SetLineWidth(2)
+dgr_deaths = MakeDerivative(gr_deaths)
+dgr_deaths.SetLineColor(gr_deaths.GetLineColor())
+dgr_deaths.SetLineWidth(2)
+
+leg.AddEntry(gr_cases, 'Derivative of cases', 'L')
+leg.AddEntry(gr_deaths, 'Derivative of deaths', 'L')
+
+
+dgr_cases.Draw('L')
+dgr_deaths.Draw('L')
 
 ROOT.gPad.Update()
 can.Print('Coronavirus_logy.png')
