@@ -3,6 +3,8 @@
 import ROOT
 # jk 12.2.2020
 
+from math import sqrt, pow
+
 from Tools import *
 
 stuff = []
@@ -36,22 +38,31 @@ Data = [ ['20.1.2020', 282, 6],
          ['12.2.2020', 45171, 1115],
          ['13.2.2020', 46997, 1369],
          ['14.2.2020', 49053, 1383],
+         ['15.2.2020', 50580, 1526],
+         ['16.2.2020', 51857, 1669],
          #['.2.2020', , ],
-         #['.2.2020', , ]
-         #['.2.2020', , ]
-         #['.2.2020', , ]
-         #['.2.2020', , ]
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
+         #['.2.2020', , ],
 ]
 
 print(Data)
 
-gr_cases = ROOT.TGraph()
+gr_cases = ROOT.TGraphErrors()
 gr_cases.SetMarkerColor(ROOT.kBlack)
 gr_cases.SetLineColor(ROOT.kBlack)
 gr_cases.SetMarkerStyle(20)
 gr_cases.SetMarkerSize(1)
 
-gr_deaths = ROOT.TGraph()
+gr_deaths = ROOT.TGraphErrors()
 gr_deaths.SetMarkerColor(ROOT.kRed)
 gr_deaths.SetLineColor(ROOT.kRed)
 gr_deaths.SetMarkerStyle(21)
@@ -63,7 +74,9 @@ for data in Data:
     date = data[0]
     cases, deaths = data[1],data[2]
     gr_cases.SetPoint(ip, ip, cases)
+    gr_cases.SetPointError(ip, 0, sqrt(cases) )
     gr_deaths.SetPoint(ip, ip, deaths)
+    gr_deaths.SetPointError(ip, 0, sqrt(deaths) )
     ip = ip+1
 
 can = ROOT.TCanvas()
