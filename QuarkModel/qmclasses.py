@@ -101,8 +101,8 @@ class chadron:
   def MakeMarks(self):
       marks = []
       off = 0.075
-      yoff = [off, off, -off, -off, -off, 0]
-      xoff = [-off, off,   0,   0,  -off, -off]
+      yoff = [ off, off, -off, off, -off, 0]
+      xoff = [-off, off,   0,   0,  -off, 0]
       iq = 0
       for Q in self.GetQuarks():
           mark = ROOT.TMarker(self.GetI3() + xoff[iq], self.GetS() + yoff[iq], Q.GetMark())
