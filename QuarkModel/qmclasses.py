@@ -98,11 +98,14 @@ class chadron:
     self._I3 = I3
     self._S = S
 
-  def MakeMarks(self):
+  def MakeMarks(self, off = 0.03):
       marks = []
-      off = 0.075
-      yoff = [ off, off, -off, off, -off, 0]
-      xoff = [-off, off,   0,   0,  -off, 0]
+      xoff = [-off, off,   0,   -off,  off, 0]
+      yoff = [ off, off, -off,  -off, -off, off]
+      if len(self.GetQuarks()) < 3:
+        xoff = [ off, -off ]
+        yoff = [ off, -off ]
+      
       iq = 0
       for Q in self.GetQuarks():
           mark = ROOT.TMarker(self.GetI3() + xoff[iq], self.GetS() + yoff[iq], Q.GetMark())

@@ -67,6 +67,7 @@ def main(argv):
 
     qtmp = ROOT.TH2D('qtmp', 'qtmp;I_{3};S', 10, -1, 1, 10, -1.5, 1.5)
     qtmp.SetStats(0)
+    qtmp.GetYaxis().SetTitleOffset(1.3)
 
     ###############################
     # make triplet
@@ -83,6 +84,9 @@ def main(argv):
     ROOT.gPad.SetGridy(1)
 
     qtmp.DrawCopy()
+
+    xoff = 0.04
+    yoff = 0.04
     
     qmarks = []
     for Qname in Quarks:
@@ -91,6 +95,10 @@ def main(argv):
         mark.SetMarkerColor(Q.GetCol())
         mark.Draw()
         qmarks.append(mark)
+        tex = ROOT.TLatex(Q.GetI3() + xoff, Q.GetS() + yoff, Q.GetTexName())
+        tex.Draw()
+        stuff.append(tex)
+
 
     ###############################
     # make antitriplet
@@ -115,11 +123,16 @@ def main(argv):
         mark.SetMarkerColor(Q.GetCol())
         mark.Draw()
         aqmarks.append(mark)
+        tex = ROOT.TLatex(Q.GetI3() + xoff, Q.GetS() + yoff, Q.GetTexName())
+        tex.Draw()
+        stuff.append(tex)
     
+        
     qcan.Update()
     
     mhtmp = ROOT.TH2D('mhtmp', 'mhtmp;I_{3};S', 10, -1.5, 1.5, 10, -1.5, 1.5)
     mhtmp.SetStats(0)
+    mhtmp.GetYaxis().SetTitleOffset(1.3)
  
   
     
@@ -129,8 +142,9 @@ def main(argv):
     moctet = {}
     moctet['pi+'] = ( chadron('pi+', [ Quarks['u'],   AQuarks['db'] ], '#pi^{+}') )
     moctet['pi-'] = ( chadron('pi-', [ AQuarks['ub'], Quarks['d'] ], '#pi^{-}') )
-    moctet['pi0'] = ( chadron('pi0', [ Quarks['u'],   AQuarks['ub'],
-                                       Quarks['d'],   AQuarks['db' ]], '#pi^{0}') )
+    moctet['pi0'] = ( chadron('pi0', [  AQuarks['sb'],   Quarks['s'],
+                                        Quarks['u'],   AQuarks['ub'],
+                                        Quarks['d'],   AQuarks['db' ]], '#pi^{0}') )
 
     moctet['K0'] = ( chadron('K0', [ Quarks['d'],   AQuarks['sb'] ], 'K^{0}') )
     moctet['aK0'] = ( chadron('aK0', [ Quarks['s'],   AQuarks['db'] ], '#bar{K}^{0}') )
@@ -139,6 +153,7 @@ def main(argv):
     moctet['K-'] = ( chadron('K-', [ Quarks['s'],   AQuarks['ub'] ], 'K^{-}') )
     
     moctet['eta'] = ( chadron('eta', [ AQuarks['sb'],   Quarks['s'] ], '#eta^{0}') )
+    moctet['eta\''] = ( chadron('eta\'', [ AQuarks['sb'],   Quarks['s'] ], '#eta\'^{0}') )
     
     xoff = -0.15
     yoff = 0.19
@@ -162,14 +177,74 @@ def main(argv):
         for mark in marks:
             mark.Draw()
         mmarks.append(marks)
-        if 'eta' in B.GetName():
+        xsign = 1
+        ysign = 1
+        if 'eta\'' in B.GetName():
             ysign = -1.5
-        else: ysign = 1
-        tex = ROOT.TLatex(B.GetI3() + xoff, B.GetS() + yoff*ysign, B.GetTexName())
+            xsign = 1.5
+        elif 'eta' in B.GetName():
+            ysign = -0.5
+            xsign = -1.0
+        tex = ROOT.TLatex(B.GetI3() + xoff*xsign, B.GetS() + yoff*ysign, B.GetTexName())
         tex.Draw()
         stuff.append(tex)
     
-    # draw meson octet
+
+
+    ###############################
+    # make meson vector octet
+    ###############################
+    vmoctet = {}
+    vmoctet['rho+'] = ( chadron('rho+', [ Quarks['u'],   AQuarks['db'] ], '#rho^{+}') )
+    vmoctet['rho-'] = ( chadron('rho-', [ AQuarks['ub'], Quarks['d'] ], '#rho^{-}') )
+    vmoctet['rho0'] = ( chadron('rho0', [  AQuarks['sb'],   Quarks['s'],
+                                        Quarks['u'],   AQuarks['ub'],
+                                        Quarks['d'],   AQuarks['db' ]], '#rho^{0}') )
+
+    vmoctet['K*0'] = ( chadron('K*0', [ Quarks['d'],   AQuarks['sb'] ], 'K*^{0}') )
+    vmoctet['aK*0'] = ( chadron('aK*0', [ Quarks['s'],   AQuarks['db'] ], '#bar{K*}^{0}') )
+
+    vmoctet['K*+'] = ( chadron('K*+', [ Quarks['u'],   AQuarks['sb'] ], 'K*^{+}') )
+    vmoctet['K*-'] = ( chadron('K*-', [ Quarks['s'],   AQuarks['ub'] ], 'K*^{-}') )
+    
+    vmoctet['phi0'] = ( chadron('phi0', [ AQuarks['sb'],   Quarks['s'] ], '#phi^{0}') )
+    vmoctet['omega0'] = ( chadron('omega0', [ AQuarks['sb'],   Quarks['s'] ], '#omega^{0}') )
+    
+    xoff = -0.15
+    yoff = 0.19
+
+    cw = 800
+    ch = 800
+    
+    # draw mezon octet
+    canname = 'vmesonOctet'
+    vmcan = ROOT.TCanvas(canname, canname, 100, 100, cw, ch)
+    #can.Divide(3,1)
+    cans.append(vmcan)
+    vmcan.cd()
+    mhtmp.DrawCopy()
+    ROOT.gPad.SetGridx(1)
+    ROOT.gPad.SetGridy(1)
+    vmmarks = []
+    for bb in vmoctet:
+        B = vmoctet[bb]
+        marks = B.MakeMarks()
+        for mark in marks:
+            mark.Draw()
+        vmmarks.append(marks)
+        xsign = 1
+        ysign = 1
+        if 'phi' in B.GetName():
+            ysign = -1.5
+            xsign = 1.5
+        elif 'omega' in B.GetName():
+            ysign = -0.5
+            xsign = -1.
+        tex = ROOT.TLatex(B.GetI3() + xoff*xsign, B.GetS() + yoff*ysign, B.GetTexName())
+        tex.Draw()
+        stuff.append(tex)
+
+        
 
     ###############################
     # make baryon octet
@@ -190,6 +265,7 @@ def main(argv):
 
     ohtmp = ROOT.TH2D('ohtmp', 'ohtmp;I_{3};S', 10, -1.5, 1.5, 10, -2.5, 0.5)
     ohtmp.SetStats(0)
+    ohtmp.GetYaxis().SetTitleOffset(1.3)
 
     # draw baryon octet
     canname = 'baryonOctet'
@@ -208,9 +284,9 @@ def main(argv):
         for mark in marks:
             mark.Draw()
         bmarks.append(marks)
+        ysign = 1
         if 'Lambda' in B.GetName():
-            ysign = -2.
-        else: ysign = 1
+            ysign = -1.5
         tex = ROOT.TLatex(B.GetI3() + xoff, B.GetS() + yoff*ysign, B.GetTexName())
         tex.Draw()
         stuff.append(tex)
@@ -224,11 +300,11 @@ def main(argv):
     bdecuplet['Delta+'] = ( chadron('Delta+', [ Quarks['u'], Quarks['u'], Quarks['d'] ], '#Delta^{+}') )
     bdecuplet['Delta0'] = ( chadron('Delta0', [ Quarks['u'], Quarks['d'], Quarks['d'] ], '#Delta^{0}') )
     bdecuplet['Delta-'] = ( chadron('Delta-', [ Quarks['d'], Quarks['d'], Quarks['d'] ], '#Delta^{-}') )
-    bdecuplet['Sigma*-'] = ( chadron('Sigma-', [ Quarks['s'], Quarks['d'], Quarks['d'] ], '#Sigma^{-}') )
-    bdecuplet['Sigma*0'] = ( chadron('Sigma0', [ Quarks['s'], Quarks['u'], Quarks['d'] ], '#Sigma^{0}') )
-    bdecuplet['Sigma*+'] = ( chadron('Sigma+', [ Quarks['s'], Quarks['u'], Quarks['u'] ], '#Sigma^{+}') )
-    bdecuplet['Xi*-'] = ( chadron('Xi*-', [ Quarks['s'], Quarks['s'], Quarks['d'] ], '#Xi^{*-}') )
-    bdecuplet['Xi*0'] = ( chadron('Xi*0', [ Quarks['s'], Quarks['s'], Quarks['u'] ], '#Xi^{*0}') )
+    bdecuplet['Sigma*-'] = ( chadron('Sigma-', [ Quarks['s'], Quarks['d'], Quarks['d'] ], '#Sigma*^{-}') )
+    bdecuplet['Sigma*0'] = ( chadron('Sigma0', [ Quarks['s'], Quarks['u'], Quarks['d'] ], '#Sigma*^{0}') )
+    bdecuplet['Sigma*+'] = ( chadron('Sigma+', [ Quarks['s'], Quarks['u'], Quarks['u'] ], '#Sigma*^{+}') )
+    bdecuplet['Xi*-'] = ( chadron('Xi*-', [ Quarks['s'], Quarks['s'], Quarks['d'] ], '#Xi*^{-}') )
+    bdecuplet['Xi*0'] = ( chadron('Xi*0', [ Quarks['s'], Quarks['s'], Quarks['u'] ], '#Xi*^{0}') )
     bdecuplet['Omega-'] = ( chadron('Omega-', [ Quarks['s'], Quarks['s'], Quarks['s'] ], '#Omega^{-}') )
 
     xoff = -0.15
@@ -242,6 +318,8 @@ def main(argv):
     dcan.cd()
     dhtmp = ROOT.TH2D('dhtmp', 'dhtmp;I_{3};S', 10, -2., 2., 10, -3.5, 0.5)
     dhtmp.SetStats(0)
+    dhtmp.GetYaxis().SetTitleOffset(1.3)
+    
     dhtmp.DrawCopy()
 
     ROOT.gPad.SetGridx(1)
