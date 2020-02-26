@@ -9,6 +9,8 @@
 # https://stackoverflow.com/questions/4042192/reduce-left-and-right-margins-in-matplotlib-plot
 # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
 # https://docs.python.org/3/howto/sorting.html
+# https://stackoverflow.com/questions/29672375/histogram-in-matplotlib-time-on-x-axis
+# https://matplotlib.org/3.1.1/api/dates_api.html
 
 # try also https://docs.python.org/3/library/csv.html ?
 # plotting: try
@@ -40,8 +42,31 @@ import csv, os, sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+from math import log10
 
 from collections import OrderedDict
+
+#########################################
+# generate zeros before a string from a short integer like '0012'
+def MakeDigitStr(i, digits = 4):
+    tag = str(i)
+    n = digits
+    try: 
+        n = int(log10(i))
+    except ValueError:
+        pass
+    if i is 0:
+        n = 0
+    for i in range(0, digits - n):
+        tag = '0' + tag
+    return tag
+
+##############################################################
+def MakeNtotTitle(i):
+   str = MakeDigitStr(i, 2)
+   return ' N=' + str
 
 ##############################################################
 
@@ -50,15 +75,18 @@ def MakeKeyTag(itag, key):
    keytag = keytag.replace(' ','_').replace('/','nebo').replace(',','_').replace('(','_').replace(')','_').replace('?','_')
    return keytag
 
+##############################################################
+
 barCharts = ['Informace získávám', 'Jsem z fakulty / odjinud', 'O anketě jsem se dozvěděl(a) ']
 
 kComment = 'Comment'
 kCommentKey = 'Comment'
 kEmpty = 'empty'
 kNotAnswered = 'Nezodpovězeno'
-
+kTimeStamp = 'Timestamp'
 toSkip = [#kComment,
-          'Timestamp' ]
+         #kTimeStamp
+         ]
 
 def SkipKey(key):
    for toskip in toSkip:
@@ -126,23 +154,32 @@ def makeQuickSummary(filename):
            for key in keys:
               if SkipKey(key):
                  continue
-
-              answs = []
-              if not IsCheckListForBarChart(key):
-                 answs.append(row[key])
-              else:
+              if key == kTimeStamp:
                  answs = row[key].split(';')
+                 for answ in answs:
+                    #print(answ)
+                    try:
+                       tmp = results[key]
+                    except:
+                       results[key] = OrderedDict()
+                    results[key][answ] = answ # kinda lame but works with downstream code;)
+              else:
+                 answs = []
+                 if not IsCheckListForBarChart(key):
+                    answs.append(row[key])
+                 else:
+                    answs = row[key].split(';')
 
-              for answ in answs:
-                 #print(answ)
-                 try:
-                    tmp = results[key]
-                 except:
-                    results[key] = OrderedDict()
-                 try:
-                    results[key][answ] = results[key][answ] + 1
-                 except:
-                    results[key][answ] = 1
+                 for answ in answs:
+                    #print(answ)
+                    try:
+                       tmp = results[key]
+                    except:
+                       results[key] = OrderedDict()
+                    try:
+                       results[key][answ] = results[key][answ] + 1
+                    except:
+                       results[key][answ] = 1
                     
            line_count += 1
         print('*** Processed {:} lines.'.format(line_count))
@@ -151,7 +188,7 @@ def makeQuickSummary(filename):
         return line_count,results
     
 ##############################################################
-def makeResults(filename, filtername, Filter):
+def makeResults(filename, filtername, Filter, nReqLines = -1):
     print('*** Processing Filter {}'.format(filtername))
 
     # Get keys
@@ -161,7 +198,7 @@ def makeResults(filename, filtername, Filter):
         line_count = 0
         print('Making keys dict...')
         for row in csv_reader:
-           print(row)
+           #print(row)
            if line_count == 0:
               #print('Column names are')
               #print(row)
@@ -177,40 +214,42 @@ def makeResults(filename, filtername, Filter):
     with open(filename, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
-           print('*** Processing row {}'.format(line_count))
+           if nReqLines > 0 and line_count >= nReqLines:
+              continue
+           #print('*** Processing row {}'.format(line_count))
            #print(row)
            # First loop over keys to get the filter condition
            skipBasedOnComments = False
            for fkey in Filter:
               if kComment in fkey:
-                 print('OK, we want to filter on comments field!')
+                 #print('OK, we want to filter on comments field!')
                  Conditions = Filter[fkey]
                  for condition in Conditions:
                     reqAnsw = condition.GetReqAnsw()
                     doReq = condition.GetDoReq()
                     logic = condition.GetLogic()
                     comment = row[kCommentKey]
-                    print(' condition: {} {}'.format(reqAnsw, doReq))
-                    print('  ...the comment is "{}"'.format(comment))
+                    #print(' condition: {} {}'.format(reqAnsw, doReq))
+                    #print('  ...the comment is "{}"'.format(comment))
                     # we want non-empty comment:
                     if reqAnsw == kEmpty and doReq == False and comment == '':
                        skipBasedOnComments = True
                        # pop out the first comments condition in next upgrade?
-                       print('    Skip on empty comment request, {}'.format(skipBasedOnComments))
+                       #print('    Skip on empty comment request, {}'.format(skipBasedOnComments))
                        break
                     # we want empty comment: 
                     if reqAnsw == kEmpty and doReq == True and comment != '':
                        skipBasedOnComments = True
-                       print('    Skip on non-empty comment request, {}'.format(skipBasedOnComments))
+                       #print('    Skip on non-empty comment request, {}'.format(skipBasedOnComments))
                        break
               if skipBasedOnComments:
                  break
 
            if skipBasedOnComments:
-              print('         SKIPPING!')
+              #print('         SKIPPING!')
               continue
                        
-           print('         PROCESSING!!')
+           #print('         PROCESSING!!')
 
            toPass = not skipBasedOnComments # True
            for key in keys:
@@ -222,17 +261,17 @@ def makeResults(filename, filtername, Filter):
               else:
                  answs = row[key].split(';')
               for answ in answs:
-                 print('* Processing key "{}"'.format(key))
+                 #print('* Processing key "{}"'.format(key))
                  # go through required filter keys
                  for fkey in Filter:
                     if fkey == kCommentKey:
                        continue
-                    print('  processing filter key {}'.format(fkey))
+                    #print('  processing filter key {}'.format(fkey))
                     if key == fkey:
-                         print('    ok, have matching keys {} and {}'.format(key, fkey))
+                         #print('    ok, have matching keys {} and {}'.format(key, fkey))
                          Conditions = Filter[fkey]
                          nCond = len(Conditions)
-                         print('  processing {} conditions'.format(nCond))
+                         #print('  processing {} conditions'.format(nCond))
                          thisPass = True
                          icond = -1
                          for condition in Conditions:
@@ -241,60 +280,70 @@ def makeResults(filename, filtername, Filter):
                              reqAnsw = condition.GetReqAnsw()
                              doReq = condition.GetDoReq()
                              logic = condition.GetLogic()
-                             print('      row data are: "{}": "{}"'.format(key, answ))
+                             #print('      row data are: "{}": "{}"'.format(key, answ))
                              microCondition = False
                              if doReq:
                                  microCondition = reqAnsw in answ
                              else:
                                  microCondition = not ( reqAnsw in answ )
                              if logic == 'OR':
-                                print('        ...ORing with previous condition')
+                                #print('        ...ORing with previous condition')
                                 thisPass = thisPass or microCondition
                              elif logic == 'AND':
-                                print('        ...ANDing with previous condition')
+                                #print('        ...ANDing with previous condition')
                                 thisPass = thisPass and microCondition
                              elif logic == '' and (nCond == 1 or (nCond > 1 and icond == 0) ):
-                                print('        ...defining as current condition')
+                                #print('        ...defining as current condition')
                                 thisPass = microCondition
                              else:
                                 print('        THIS SHOULD NEVER HAPPEN!')
-                             print('       processed key for "{}" condition "{}" "{}" "{}"'.format(fkey, reqAnsw, doReq, logic))
-                             print('       microCondition: {} thisPass: {}'.format(microCondition, thisPass))
+                             #print('       processed key for "{}" condition "{}" "{}" "{}"'.format(fkey, reqAnsw, doReq, logic))
+                             #print('       microCondition: {} thisPass: {}'.format(microCondition, thisPass))
                          if thisPass == False:
                             toPass = False
-                         print('  ...done processing conditions!')
+                         #print('  ...done processing conditions!')
                     if not toPass:
-                       print('      leaving filter!')
+                       #print('      leaving filter!')
                        break
 
                  if not toPass:
-                   print('  FAILED cuts, leaving the key loop!!')
+                   #print('  FAILED cuts, leaving the key loop!!')
                    continue
            
            # keep filling/counting otherwise:) 
            if toPass:
-              print('  PASSED cuts, filling;-)')
+              #print('  PASSED cuts, filling;-)')
               # Second loop over filter condition to collect the counts
               for key in keys:
                  if SkipKey(key):
                     continue
-                 answs = []
-                 if not IsCheckListForBarChart(key):
-                    answs.append(row[key])
-                 else:
+                 if key == kTimeStamp:
                     answs = row[key].split(';')
+                    for answ in answs:
+                       #print(answ)
+                       try:
+                          tmp = results[key]
+                       except:
+                          results[key] = OrderedDict()
+                       results[key][answ] = answ # kinda lame but works with downstream code;)
+                 else:
+                    answs = []
+                    if not IsCheckListForBarChart(key):
+                       answs.append(row[key])
+                    else:
+                       answs = row[key].split(';')
 
-                 print('   FILLING!')
-                 for answ in answs:
-                     #print(answ)
-                     try:
-                        tmp = results[key]
-                     except:
-                        results[key] = {} # OrderedDict()
-                     try:
-                        results[key][answ] = results[key][answ] + 1
-                     except:
-                        results[key][answ] = 1
+                    #print('   FILLING!')
+                    for answ in answs:
+                        #print(answ)
+                        try:
+                           tmp = results[key]
+                        except:
+                           results[key] = {} # OrderedDict()
+                        try:
+                           results[key][answ] = results[key][answ] + 1
+                        except:
+                           results[key][answ] = 1
 
 
               line_count += 1
@@ -302,8 +351,8 @@ def makeResults(filename, filtername, Filter):
 
 
     print('*** Processed {:} lines.'.format(line_count))
-    print('*** The results and counts are:')
-    print(results)
+    #print('*** The results and counts are:')
+    #print(results)
     return line_count,results
     
 
@@ -316,7 +365,7 @@ def func(pct, allvals):
 
 ##############################################################
 
-def plotresults(dirname, results, nLines, nmaxSegments = 8):
+def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
 
    pies = []
    dirname = 'png_' + dirname 
@@ -326,34 +375,63 @@ def plotresults(dirname, results, nLines, nmaxSegments = 8):
    os.system('mkdir -p {}'.format(dirname))
    pdfdirname = dirname
    pdfdirname = pdfdirname.replace('png','pdf')
-   os.system('mkdir -p {}'.format(pdfdirname))
+   if not '00' in dirname:
+      os.system('mkdir -p {}'.format(pdfdirname))
    
-   ikey = 1
+   ikey = 0
    for key in results:
-      print('In plotresults...')
+      #print('In plotresults...')
       data = []
       answers = []
-      print(key, results[key])
+      #print(key, results[key])
       iansw = 0
       for answ in results[key]:
          respondents_count = results[key][answ] 
-         if iansw < nmaxSegments or IsCheckListForBarChart(key):
-            data.append(respondents_count)
-            leg_answ = answ
-            if leg_answ == '':
-               leg_answ = kNotAnswered
-            answers.append(leg_answ)
+         if key != kTimeStamp:
+            if iansw < nmaxSegments or IsCheckListForBarChart(key):
+               data.append(respondents_count)
+               leg_answ = answ
+               if leg_answ == '':
+                  leg_answ = kNotAnswered
+               answers.append(leg_answ)
+            else:
+               data[-1] = data[-1] + respondents_count
+               answers[-1] = 'Jinak'
          else:
-            data[-1] = data[-1] + respondents_count
-            answers[-1] = 'Jinak'
+            data.append(respondents_count)
          iansw = iansw + 1
-      print('plotting {} {}'.format(key, data))
-      if not kNotAnswered in answers:
+      #print('plotting {} {}'.format(key, data))
+      if not kNotAnswered in answers and key != kTimeStamp:
          data.append(0)
          answers.append(kNotAnswered)
-      data, answers = zip(*sorted(zip(data, answers), reverse=True))
-      data, answers = (list(t) for t in zip(*sorted(zip(data, answers), reverse=True)))
-      if not IsCheckListForBarChart(key):
+      if key != kTimeStamp:
+         data, answers = zip(*sorted(zip(data, answers), reverse=True))
+         data, answers = (list(t) for t in zip(*sorted(zip(data, answers), reverse=True)))
+      else:
+         mdata = mdates.datestr2num(data)
+         data = mdata
+      if key == kTimeStamp:
+         #print('OK, plotting histogram of timestamps!')
+         # make a time histogram
+         fig, ax = plt.subplots(1,1)
+         #print(data)
+         ax.hist(data, bins = 100, color = 'blue')
+         #ax.xaxis.set_major_locator(mdates.YearLocator())
+         ax.xaxis.set_major_locator(mdates.DayLocator())
+         ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %h')) # %d.%m.%y'))
+         ax.set_title(key + MakeNtotTitle(nLines))
+         itag = str(ikey)
+         if ikey < 10:
+            itag = '0' + itag
+         if ikey < 1:
+              itag = '00'
+         keytag = MakeKeyTag(itag, key)
+         plt.savefig('{}{}.png'.format(dirname, keytag))
+         if not '00' in dirname:
+            plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
+         ikey = ikey + 1
+         pies.append(fig)
+      elif not IsCheckListForBarChart(key):
          # pie plot
          plt.tight_layout()
          plt.subplots_adjust(left=0.1,wspace = 0.1)
@@ -366,18 +444,19 @@ def plotresults(dirname, results, nLines, nmaxSegments = 8):
                    bbox_to_anchor=(0, 0., 0.5, -0.2)
          )
          plt.setp(autotexts, size=8, weight="bold")
-         ax.set_title(key)
+         ax.set_title(key  + MakeNtotTitle(nLines))
          itag = str(ikey)
          if ikey < 10:
             itag = '0' + itag
          keytag = MakeKeyTag(itag, key)
          plt.savefig('{}{}.png'.format(dirname, keytag))
-         plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
+         if not '00' in dirname:
+            plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
          ikey = ikey + 1
          #plt.show()
          pies.append(fig)
       else:
-         print('OK, request for a ybar chart!;-)')
+         #print('OK, request for a ybar chart!;-)')
          # ybar chart
          # plt.rcdefaults()
          fig, ax = plt.subplots()
@@ -400,19 +479,20 @@ def plotresults(dirname, results, nLines, nmaxSegments = 8):
 
          #ax.barh(y_pos, data, xerr=error, align='center')
          fdata = []
-         print(data)
+         #print(data)
          for val in data:
             fdata.append( val / (1.*nLines)*100 )
-         print(fdata)
+         #print(fdata)
          ax.barh(y_pos, fdata, align = 'center')
          ax.set_yticks(y_pos)
          ax.set_yticklabels(answers)
          ax.invert_yaxis()  # labels read top-to-bottom
          ax.set_xlabel('Četnost [%]')
-         ax.set_title(key)
+         ax.set_title(key + MakeNtotTitle(nLines))
          #plt.show()
          plt.savefig('{}{}.png'.format(dirname, keytag))
-         plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
+         if not '00' in dirname:
+            plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
          pies.append(fig)
 
    return pies
@@ -431,39 +511,48 @@ def main(argv):
     
     allResults = []
     
-    nLines,sumResults = makeQuickSummary(filename)
-    allResults.append(sumResults)
-    pie = plotresults('sumResults', sumResults, nLines)
-    Pies.append(pie)
+    #nLines,sumResults = makeQuickSummary(filename)
+    #allResults.append(sumResults)
+    #pie = plotresults('sumResults', sumResults, nLines)
+    #Pies.append(pie)
     
     # and now some Filters;-)
     # structure: key : ['requiredVal', requireNotInvert]
     # if more for one key, then can OR or AND them!
     Filters = { 'All' : {'' : []},
-                'Studenti' :    { 'Jsem pracovník' : [ccondition('student', True, '')] },
-                'nonStudenti' :    { 'Jsem pracovník' : [ccondition('student', False, '')] },
-                'Muzi' :    { 'Jsem' : [ccondition('muž', True, '')] },
-                'NonMuzi' :    { 'Jsem' : [ccondition('muž', False, '')] },
-                'Zeny' :    { 'Jsem' : [ccondition('žena', True, '')] },
-                'PrF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ] },
-                'MuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', True, '')] },
-                'nonMuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', False, '')] },
-                'nonPrF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', False, '')] },
-                'LForFF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
-                'MuzLForFF' :  { 'Jsem' : [ccondition('muž', True, '')],
-                                 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
-                'Comments' : { kComment : [ccondition(kEmpty, False, '')] },
-                'noComments' : { kComment : [ccondition(kEmpty, True, '')] },
+                #'Studenti' :    { 'Jsem pracovník' : [ccondition('student', True, '')] },
+                #'nonStudenti' :    { 'Jsem pracovník' : [ccondition('student', False, '')] },
+                #'Muzi' :    { 'Jsem' : [ccondition('muž', True, '')] },
+                #'NonMuzi' :    { 'Jsem' : [ccondition('muž', False, '')] },
+                #'Zeny' :    { 'Jsem' : [ccondition('žena', True, '')] },
+                #'PrF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ] },
+                #'MuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', True, '')] },
+                #'nonMuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', False, '')] },
+                #'nonPrF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', False, '')] },
+                #'LForFF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
+                #'MuzLForFF' :  { 'Jsem' : [ccondition('muž', True, '')],
+                #                 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
+                #'Comments' : { kComment : [ccondition(kEmpty, False, '')] },
+                #'noComments' : { kComment : [ccondition(kEmpty, True, '')] },
     }
 
     # HACK!!
     # Filters = {}
     
     for filtername in Filters:
+        print('### Processing filter {}'.format(filtername))
         nLines,results = makeResults(filename, filtername, Filters[filtername])
         allResults.append(results)
         pie = plotresults(filtername, results, nLines)
         Pies.append(pie)
+        if filtername == 'All':
+           for nReqLines in range(1, nLines, 5):
+              print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
+              nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)
+              allResults.append(results2)
+              pie2 = plotresults(filtername + '_' + MakeDigitStr(nReqLines), results2, nReqLines)
+              Pies.append(pie2)
+           
 
 
 ###################################
