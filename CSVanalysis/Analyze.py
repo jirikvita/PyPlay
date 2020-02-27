@@ -84,9 +84,16 @@ kCommentKey = 'Comment'
 kEmpty = 'empty'
 kNotAnswered = 'Nezodpovězeno'
 kTimeStamp = 'Timestamp'
-toSkip = [#kComment,
-         #kTimeStamp
+toSkip = [kComment,
+          # kTimeStamp
          ]
+toSkip2d = [kComment,
+            kTimeStamp,
+            barCharts[0], barCharts[2],
+            "Současné dění okolo VŠÚ na UP považuji za záležitost",
+            "Současné etické kauzy na UP I","Současné etické kauzy na UP II","Dění okolo Etické komise UP","Etické podněty ohledně možného falšování dat považuji za","Etické podněty k chování, komunikaci, práci či rozhodování některých zaměstnanců či vedoucích pracovníků považuji za","Roli univerzitního ombudsmana/ky","Postoje a postup vedení UP v řešení vzniku VŠÚ považuji za","Postoje a postup vedení UP v řešení etických kauz považuji za","Způsob řešení problémů na UP ze strany vedení UP považuji za ","Univerzitu Palackého považuji z hlediska mé vědecké, pedagogické či jiné práce","Na dění na UP ohledně vzniku VŠÚ","Na dění na UP ohledně etických kauz","K dění na UP ohledně vzniku VŠÚ","K dění na UP v etických kauzách","Svůj názor na dění na UP ohledně vzniku VŠÚ","Svůj názor na dění na UP ohledně etických kauz",
+            "Anketu jsem uvítal(a)","Rád budu seznámen(a) s výsledky (budou zveřejněny na UP reflexi)", "Mám možnost se svobodně rozhodnout, zda ve VŠÚ chci pracovat nebo ne"
+]
 
 def SkipKey(key):
    for toskip in toSkip:
@@ -101,6 +108,155 @@ def IsCheckListForBarChart(key):
    return False
 
 
+
+#########################################
+def GetIndex(key, keys, nUniq):
+    s = 0
+    for key2 in keys:
+        if key == key2:
+            break
+        s += nUniq[key2]
+    return s
+
+#########################################
+def MakeLabels(uniqs, numeric = True):
+    labels = []
+    ikey = 0
+    for key in uniqs:
+        ikey += 1
+        for val in uniqs[key]:
+            if numeric:
+                labels.append('{}: {}'.format(ikey,val))
+            else:
+                labels.append('{}: {}'.format(key, val))
+    return labels
+
+#########################################
+
+def PlotData2d(Data, dirname, pdfdirname, nmaxSegments = 6):
+
+    keys = []
+    for data in Data:
+        for key in data:
+            if key in toSkip2d:
+                continue
+            keys.append(key)
+        break
+
+    uniqueAnsws = {}
+    for data in Data:
+        ikey = 0
+        for key in data:
+            if key in toSkip2d:
+                continue
+            if not key in keys:
+                keys.append(key)
+            ikey += 1
+            try:
+                test = uniqueAnsws[key]
+            except:
+                uniqueAnsws[key] = []
+            answ = data[key]
+            if answ == '':
+                answ = kNotAnswered
+                continue # screw it!
+            if not answ in uniqueAnsws[key]:
+                if len(uniqueAnsws[key]) < nmaxSegments:
+                    uniqueAnsws[key].append(answ)
+                else:
+                    uniqueAnsws[key][-1] = 'Jinak'
+
+    #print('Unique answers are')
+    #print(uniqueAnsws)
+
+    nUniq = {}
+    for key in uniqueAnsws:
+        nUniq[key] = len(uniqueAnsws[key])
+    nKeys = len(keys)
+
+
+    #print('Key counts are')
+    #print(nUniq)
+
+    x = []
+    y = []
+    N = 0
+    idata = -1
+    for data1 in Data:
+        idata = idata + 1
+        for key1 in data1:
+            if key1 in toSkip2d:
+                continue
+            if idata == 0:
+                N = N + nUniq[key1]
+            for data2 in Data:
+                for key2 in data2:
+                    if key2 in toSkip2d:
+                        continue
+                    if key1 != key2:
+                        #print(uniqueAnsws[key1].index(data1[key1]), uniqueAnsws[key2].index(data2[key2]) )
+                        li1 = 0
+                        li2 = 0
+                        #try:
+                        answ1 = data1[key1]
+                        if answ1 == '':
+                            answ1 = kNotAnswered
+                            continue
+                        #print(uniqueAnsws[key1])
+                        #print('"{}"'.format(answ1))
+                        if answ1 in uniqueAnsws[key1]:
+                            li1 = uniqueAnsws[key1].index(answ1)
+                        #except ValueError:
+                        else:
+                            li1 = len(uniqueAnsws[key1])-1
+                        #try:
+                        answ2 = data2[key2]
+                        if answ2 == '':
+                            answ2 = kNotAnswered
+                            continue
+                        #print(uniqueAnsws[key2])
+                        #print('"{}"'.format(answ2))
+                        if answ2 in uniqueAnsws[key2]:
+                            li2 = uniqueAnsws[key2].index(answ2)
+                        #except ValueError:
+                        else:
+                            li2 = len(uniqueAnsws[key2])-1
+                        i1 = GetIndex(key1, keys, nUniq) + li1
+                        i2 = GetIndex(key2, keys, nUniq) + li2
+                        #print(key1, data1[key1], key2, data2[key2], i1, i2)
+                        x.append(i1)
+                        y.append(i2)
+
+    print('N of total bins: {}'.format(N))
+    print('Number of data rows: {}'.format(len(Data)))
+
+    #print(len(x), len(y))
+    #for xx,yy in zip(x,y):
+    #    print(xx,yy)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    plt.subplots_adjust(bottom = 0.25, left = 0.25, right = 0.99, top = 0.99) # hspace = 0.3, wspace = 0.3
+    ax.hist2d(x, y, bins = (range(0,N+1),range(0,N+1)), cmap=plt.cm.jet)
+
+    bins = [  i + 0.5 for i in range(0,N) ]
+    ax.set_xticks(bins)
+    ax.set_yticks(bins)
+
+    labels = MakeLabels(uniqueAnsws)
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(90)
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(90)
+    
+    plt.savefig('{}Data2d.png'.format(dirname))
+    if not '00' in dirname:
+        plt.savefig('{}Data2d.pdf'.format(pdfdirname))
+    # plt.show()
+        
+    return fig
 
 ##############################################################
 
@@ -125,14 +281,16 @@ class ccondition:
 ##############################################################
 
 def makeQuickSummary(filename):
-
+    print('Making quick summary results...')
+    # data for correlations, should not include the empty answer nor the 'Jinak' key
+    
     keys = []
     with open(filename, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         line_count = 0
         print('Making keys dict...')
         for row in csv_reader:
-           print(row)
+           # print(row)
            if line_count == 0:
               #print('Column names are')
               #print(row)
@@ -143,15 +301,24 @@ def makeQuickSummary(filename):
            line_count += 1
 
     results = {} # OrderedDict()
+
+    Data = [] # for 2D plot
+
     with open(filename, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         line_count = 0
         print('Processing lines...')
         line_count = 0
+        irow = -1
         for row in csv_reader:
+           irow += 1
+           #if irow < 100:
+           Data.append(row)
            #print('Processing row')
            #print(row)
+           ikey = 0
            for key in keys:
+              ikey = ikey + 1
               if SkipKey(key):
                  continue
               if key == kTimeStamp:
@@ -185,7 +352,7 @@ def makeQuickSummary(filename):
         print('*** Processed {:} lines.'.format(line_count))
         #print('*** The results and counts are:')
         #print(results)
-        return line_count,results
+        return Data, line_count,results
     
 ##############################################################
 def makeResults(filename, filtername, Filter, nReqLines = -1):
@@ -511,10 +678,13 @@ def main(argv):
     
     allResults = []
     
-    #nLines,sumResults = makeQuickSummary(filename)
-    #allResults.append(sumResults)
-    #pie = plotresults('sumResults', sumResults, nLines)
-    #Pies.append(pie)
+    Data, nLines, sumResults = makeQuickSummary(filename)
+    allResults.append(sumResults)
+    plotdir = 'sumResults'
+    pie = plotresults(plotdir, sumResults, nLines)
+    Pies.append(pie)
+    fig = PlotData2d(Data, 'png_' + plotdir, 'pdf_' + plotdir )
+    Pies.append(fig)
     
     # and now some Filters;-)
     # structure: key : ['requiredVal', requireNotInvert]
@@ -537,7 +707,7 @@ def main(argv):
     }
 
     # HACK!!
-    # Filters = {}
+    Filters = {}
     
     for filtername in Filters:
         print('### Processing filter {}'.format(filtername))
