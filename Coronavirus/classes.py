@@ -33,6 +33,15 @@ gKeyNames = { gHealthy : 'healthy', gInfected : 'infected', gSick : 'sick', gSup
 
 #########################################
 
+def MakeIterHkey(key):
+    return '{}_Iter'.format(key)
+
+def RemoveIterHkey(key):
+    rkey = '{}'.format(key)
+    return rkey.replace('_Iter','')
+
+#########################################
+
 def Count(families, status):
     n = 0
     for fam in families:
@@ -74,6 +83,7 @@ class cworld:
     self._histos = histos
     self._day = day
     self._step = step
+    self._totIters = 0
     self._xmin = xmin
     self._xmax = xmax
     self._ymin = ymin
@@ -132,8 +142,10 @@ class cworld:
       # swap home and school/work attraction indices
       # every family member returns home;-)
       self._attractorIndex[1],self._attractorIndex[0] = self._attractorIndex[0],self._attractorIndex[1]
+
   def IncStep(self):
       self._step = self._step + 1
+      self._totIters = self._totIters + 1
 
   def GetStatusStr(self, families):
       status = GetWorldStatus(families)
@@ -159,8 +171,10 @@ class cworld:
       #if self._histos['age'].GetEntries() > 0:
       #    ageMax = self._histos['age'].GetMaximum()
       #    setMax = True
+      print(self._histos)
       for key in self._histos:
-          if key == 'iage': continue
+          if key == 'iage' or 'Iter' in key:
+              continue
           self._histos[key].Reset()
       counts = {}
       for key in self._histos:
@@ -168,7 +182,7 @@ class cworld:
       for family in families:
           for mem in family.GetMembers():
               key = mem.GetStatus()
-              counts[key] = counts[key] + 1
+              counts[str(key)] = counts[str(key)] + 1
               if key != gDead:
                   self._histos['age'].Fill(mem.GetAge())
       for ikey in gKeys:
@@ -176,8 +190,13 @@ class cworld:
           #self._histos[key].Fill(key, counts[key])
           for hkey in self._histos:
               #print('hkey={}'.format(hkey))
-              if ikey == hkey:
+              if str(ikey) == hkey:
                   self._histos[hkey].SetBinContent(ikey+1, counts[hkey])
+              iterKey = MakeIterHkey(ikey)
+              if hkey == iterKey:
+                  # fill histos as function of nIter!
+                  print(ikey, hkey, iterKey)
+                  self._histos[iterKey].SetBinContent(self._totIters+1, counts[RemoveIterHkey(hkey)])
       #if setMax:
       #    self._histos['age'].SetMaximum(ageMax)
       ymax = self._nPeople

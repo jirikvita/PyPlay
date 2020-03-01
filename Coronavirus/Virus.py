@@ -10,22 +10,35 @@ from Tools import *
 
 
 #########################################
-def MakeHistos():
+def MakeHistos(nTotIters):
     histos = {}
     # prepare hsitograms of different color
     # where each will have only one non-zero bin filled with the number of people in each category
     # need also to add the age histo! TODO
     n = len(gKeys)
     for key in gKeys:
+        # histograms of overall numbers
         name = 'h_{:}'.format(gKeyNames[key])
         title = ';;people'
         histo = ROOT.TH1D(name, title, n, 0, n)
         histo.SetFillColor(gCols[key])
         histo.SetStats(0)
-        histos[key] = histo
+        histos[str(key)] = histo
+
+        # histograms of overall numbers as function of iteration!
+        name = 'h_{:}_vs_nIter'.format(gKeyNames[key])
+        title = ';;people'
+        histo = ROOT.TH1D(name, title, nTotIters, 0, nTotIters)
+        histo.SetLineColor(gCols[key])
+        histo.SetMarkerColor(gCols[key])
+        histo.SetMarkerStyle(24)
+        histo.SetMarkerSize(0.5)
+        histo.SetLineWidth(2)
+        histo.SetStats(0)
+        histos[MakeIterHkey(key)] = histo
 
     for key in gKeys:
-        histo = histos[key]
+        histo = histos[str(key)]
         for key2 in gKeys:
             print('Setting bin {:} label to {:}'.format(key2+1, gKeyNames[key2]))
             histo.GetXaxis().SetBinLabel(key2+1, gKeyNames[key2])
@@ -188,7 +201,7 @@ def MakeStep(world, families, attractors, params):
                   elif mem.GetStatus() == gInfected:
                       # randomly get sick from infected
                       tau = params.GetIncubationTime()
-                      # TO FINISH!!!
+                      # TO FINISH!!! NO, KEEP the SICK turning probability as below;-)
                       #if rand.Uniform(0,1) > 1./tau*exp(-world.GetDay() / tau):
                       if rand.Uniform(0,1) < 0.00001:
                           mem.SetStatus(gSick)
@@ -203,7 +216,7 @@ def MakeStep(world, families, attractors, params):
 
 
 #########################################
-def ShowWorld(world, attractors):
+def ShowWorld(world, attractors, nPeople):
   world.GetCan()[0].Draw()
   world.GetCan()[1].cd()
   for attractor in attractors:
@@ -215,7 +228,7 @@ def ShowWorld(world, attractors):
       circ.Draw()
       stuff.append(circ)
   # draw age
-  world.GetCan()[3].cd()
+  world.GetCan()[2][0].cd()
   if world.GetDay() == 0 and world.GetStep() == 0:
       Age_h = world.GetHistos()['age']
       cloneAge_h = Age_h.Clone('age_h_initial')
@@ -228,14 +241,38 @@ def ShowWorld(world, attractors):
   world.GetHistos()['age'].Draw('histsame')
   
   # draw counts
-  world.GetCan()[2].cd()
+  world.GetCan()[2][2].cd()
   sameopt = ''
   for key in world.GetHistos():
       if key == 'age' or key == 'iage':
           continue
-      histo = world.GetHistos()[key]
-      histo.Draw('hbar' + sameopt)
-      sameopt = 'same'
+      if 'Iter' in key:
+          pass
+      else:
+          histo = world.GetHistos()[key]
+          histo.Draw('hbar' + sameopt)
+          sameopt = 'same'
+
+
+  # draw counts as function of nIter
+  world.GetCan()[2][1].cd()
+  sameopt = ''
+  for key in world.GetHistos():
+      if key == 'age' or key == 'iage':
+          continue
+      try:
+          if 'Iter' in key:
+              #hkey = MakeIterHkey(key)
+              histo = world.GetHistos()[key]
+              print('Drawing {}'.format(key))
+              histo.SetMinimum(0.)
+              histo.SetMaximum(nPeople)
+              print(histo.GetBinContent(1))
+              histo.Draw('P' + sameopt)
+              sameopt = 'same'
+      except:
+          pass
+
   return stuff
 
 #########################################
@@ -265,9 +302,9 @@ def DrawFamilies(world, families):
   return markers
 
 #########################################
-def Draw(world, families, attractors):
+def Draw(world, families, attractors, nPeople):
 
-    ShowWorld(world, attractors)
+    ShowWorld(world, attractors, nPeople)
 
     # hm, memory grow...?
     markers = DrawFamilies(world, families)
@@ -275,9 +312,9 @@ def Draw(world, families, attractors):
     sday = MakeDigitStr(world.GetDay(),2)
     sstep = MakeDigitStr(world.GetStep(),2)
     sss = 'day {:} step {:}'.format(sday, sstep)
-
-    world.GetCan()[2].cd()
-    txt = ROOT.TLatex(0.12, 0.95, sss)
+    
+    world.GetCan()[2][2].cd()
+    txt = ROOT.TLatex(0.12, 0.92, sss)
     txt.SetTextSize(0.10)
     txt.SetNDC()
     txt.SetTextColor(ROOT.kBlue)
@@ -344,8 +381,8 @@ def main(argv):
 
     canname = 'world'
     canc = ROOT.TCanvas(canname, canname, 0, 0, 800, 600)
-    canMain,pad1,pad2 = MakePads(canc)
-    can = [canc,canMain, pad1, pad2]
+    mainPad,pads = MakePads(canc)
+    can = [canc, mainPad, pads]
     cans.append(can)
 
     # day, night
@@ -359,7 +396,11 @@ def main(argv):
     ymax = 1.*gkm
     randSpeedX = 0.005*gkm
     randSpeedY = 0.005*gkm
-    histos = MakeHistos()
+
+    nDays = 6 # 30
+    nTimeSteps = 172
+    nTotIters = nDays*nTimeSteps
+    histos = MakeHistos(nTotIters)
     
     # attractor indices [0,1] symbolize home and world
     world = cworld(can, histos, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, gCols, gMarks, [0, 1])
@@ -422,18 +463,17 @@ def main(argv):
     nAverInFamily = 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
-    nDays = 6 # 30
-    nTimeSteps = 172
 
     #########
     # LOOP! #
     #########
+    nPeople = CountPeople(families)
     
     for day in xrange(0, nDays):
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
-            Draw(world, families, attractors)
+            Draw(world, families, attractors, nPeople)
             world.PrintStatus(families)
             MakeStep(world, families, attractors, params)
             world.IncStep()

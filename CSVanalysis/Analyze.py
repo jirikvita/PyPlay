@@ -582,7 +582,7 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
          # make a time histogram
          fig, ax = plt.subplots(1,1)
          #print(data)
-         ax.hist(data, bins = 100, color = 'blue')
+         ax.hist(data, bins = 150, color = 'blue')
          #ax.xaxis.set_major_locator(mdates.YearLocator())
          ax.xaxis.set_major_locator(mdates.DayLocator())
          ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %h')) # %d.%m.%y'))
@@ -683,31 +683,31 @@ def main(argv):
     plotdir = 'sumResults'
     pie = plotresults(plotdir, sumResults, nLines)
     Pies.append(pie)
-    fig = PlotData2d(Data, 'png_' + plotdir, 'pdf_' + plotdir )
-    Pies.append(fig)
+    #fig = PlotData2d(Data, 'png_' + plotdir, 'pdf_' + plotdir )
+    #Pies.append(fig)
     
     # and now some Filters;-)
     # structure: key : ['requiredVal', requireNotInvert]
     # if more for one key, then can OR or AND them!
     Filters = { 'All' : {'' : []},
-                'Studenti' :    { 'Jsem pracovník' : [ccondition('student', True, '')] },
-                'nonStudenti' :    { 'Jsem pracovník' : [ccondition('student', False, '')] },
-                'Muzi' :    { 'Jsem' : [ccondition('muž', True, '')] },
-                'NonMuzi' :    { 'Jsem' : [ccondition('muž', False, '')] },
-                'Zeny' :    { 'Jsem' : [ccondition('žena', True, '')] },
-                'PrF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ] },
-                'MuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', True, '')] },
-                'nonMuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', False, '')] },
-                'nonPrF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', False, '')] },
-                'LForFF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
-                'MuzLForFF' :  { 'Jsem' : [ccondition('muž', True, '')],
-                                 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
-                'Comments' : { kComment : [ccondition(kEmpty, False, '')] },
-                'noComments' : { kComment : [ccondition(kEmpty, True, '')] },
+                #'Studenti' :    { 'Jsem pracovník' : [ccondition('student', True, '')] },
+                #'nonStudenti' :    { 'Jsem pracovník' : [ccondition('student', False, '')] },
+                #'Muzi' :    { 'Jsem' : [ccondition('muž', True, '')] },
+                #'NonMuzi' :    { 'Jsem' : [ccondition('muž', False, '')] },
+                #'Zeny' :    { 'Jsem' : [ccondition('žena', True, '')] },
+                #'PrF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ] },
+                #'MuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', True, '')] },
+                #'nonMuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', False, '')] },
+                #'nonPrF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', False, '')] },
+                #'LForFF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
+                #'MuzLForFF' :  { 'Jsem' : [ccondition('muž', True, '')],
+                #                 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, ''), ccondition('FF', True, 'OR') ] },
+                #'Comments' : { kComment : [ccondition(kEmpty, False, '')] },
+                #'noComments' : { kComment : [ccondition(kEmpty, True, '')] },
     }
 
     # HACK!!
-    Filters = {}
+    #Filters = {}
     
     for filtername in Filters:
         print('### Processing filter {}'.format(filtername))
@@ -715,7 +715,8 @@ def main(argv):
         allResults.append(results)
         pie = plotresults(filtername, results, nLines)
         Pies.append(pie)
-        if filtername == 'All':
+        # HACK
+        if FALSE and filtername == 'All':
            for nReqLines in range(1, nLines, 5):
               print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
               nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)

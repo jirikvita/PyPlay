@@ -12,6 +12,13 @@ cans = []
 stuff = []
 
 #########################################
+def CountPeople(families):
+    n = 0
+    for fam in families:
+        n = n + len(fam.GetMembers())
+    return n
+
+#########################################
 def MakeDerivative(gr):
     dgr = ROOT.TGraph()
     x1 = ROOT.Double()
@@ -45,7 +52,7 @@ def MakeDigitStr(i, digits = 4):
 
 #########################################################
 
-def MakePads(can, ratio_size = 0.35, PadSeparation = 0.0, UpperPadBottomMargin = 0.1, LowerPadTopMargin = 0.0): 
+def MakePads(can, ratio_size = 0.35, nSubPads = 3, PadSeparation = 0.0, UpperPadBottomMargin = 0.1, LowerPadTopMargin = 0.0): 
     x0 = 0.75
     x1 = 0.99
     y0 = 0.01
@@ -58,25 +65,17 @@ def MakePads(can, ratio_size = 0.35, PadSeparation = 0.0, UpperPadBottomMargin =
     #padMain.SetFillColor(ROOT.kGreen+2)
     padMain.Draw();
 
-    # two pads on the right above each other
-    
-    pad1 = ROOT.TPad("p1","p1",x0,ratio_size + PadSeparation/2,x1,y1)
-    pad1.Draw()
-    pad1.SetTopMargin(0.07)
-    pad1.SetBottomMargin(UpperPadBottomMargin)
-    #pad1.SetFillColor(ROOT.kBlue)
-    #pad1.SetBorderSize(1)
-    #pad1.SetFillColor(ROOT.kYellow)
-    pad1.Draw()
-    
-    pad2 = ROOT.TPad("p2","p2",x0,y0,x1,ratio_size - PadSeparation/2)
-    pad2.Draw()
-    pad2.SetTopMargin(LowerPadTopMargin)
-    pad2.SetBottomMargin(0.10)
-    #pad2.SetLineColor(ROOT.kRed)
-    #pad2.SetFillColor(ROOT.kOrange)
-    #pad2.SetBorderSize(1)
-    #pad2.SetFillColor(ROOT.kGray)
-    pad2.Draw()
+    # three pads on the right above each other
+    pads = []
+    for i in range(0,nSubPads):
+        pad = ROOT.TPad('pad{}'.format(i),'pad'.format(i),x0, (y1-y0)/nSubPads*i ,x1,(y1-y0)/nSubPads*(i+1))
+        pad.Draw()
+        #pad.SetTopMargin(0.07)
+        #pad.SetBottomMargin(UpperPadBottomMargin)
+        #pad.SetFillColor(ROOT.kBlue)
+        #pad.SetBorderSize(1)
+        #pad.SetFillColor(ROOT.kYellow)
+        pad.Draw()
+        pads.append(pad)
 
-    return padMain,pad1,pad2
+    return padMain,pads
