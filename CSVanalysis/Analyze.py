@@ -73,6 +73,8 @@ def MakeNtotTitle(i):
 def MakeKeyTag(itag, key):
    keytag = itag + '_' + key
    keytag = keytag.replace(' ','_').replace('/','nebo').replace(',','_').replace('(','_').replace(')','_').replace('?','_')
+   if key == '':
+       keytag = keytag.replace('_','')
    return keytag
 
 ##############################################################
@@ -592,7 +594,7 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
             itag = '0' + itag
          if ikey < 1:
               itag = '00'
-         keytag = MakeKeyTag(itag, key)
+         keytag = MakeKeyTag(itag, '') # MakeKeyTag(itag, key)
          plt.savefig('{}{}.png'.format(dirname, keytag))
          if not '00' in dirname:
             plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
@@ -615,7 +617,9 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
          itag = str(ikey)
          if ikey < 10:
             itag = '0' + itag
-         keytag = MakeKeyTag(itag, key)
+         if ikey < 1:
+              itag = '00'
+         keytag = MakeKeyTag(itag, '') # MakeKeyTag(itag, key)
          plt.savefig('{}{}.png'.format(dirname, keytag))
          if not '00' in dirname:
             plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
@@ -642,7 +646,9 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
          itag = str(ikey)
          if ikey < 10:
             itag = '0' + itag
-         keytag = MakeKeyTag(itag, key)
+         if ikey < 1:
+            itag = '00'
+         keytag = MakeKeyTag(itag, '') # MakeKeyTag(itag, key)
 
          #ax.barh(y_pos, data, xerr=error, align='center')
          fdata = []
@@ -661,6 +667,7 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
          if not '00' in dirname:
             plt.savefig('{}{}.pdf'.format(pdfdirname, keytag))
          pies.append(fig)
+         ikey = ikey + 1
 
    return pies
 
@@ -716,8 +723,8 @@ def main(argv):
         pie = plotresults(filtername, results, nLines)
         Pies.append(pie)
         # HACK
-        if FALSE and filtername == 'All':
-           for nReqLines in range(1, nLines, 5):
+        if filtername == 'All':
+           for False and nReqLines in range(446, nLines, 10):
               print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
               nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)
               allResults.append(results2)
