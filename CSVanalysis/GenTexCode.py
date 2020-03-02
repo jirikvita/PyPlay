@@ -2,6 +2,7 @@
 
 import os, sys
 
+dirname='ResultsNonTrolled/'
 dtag = 'All'
 
 outfilename = 'results_{}.tex'.format(dtag)
@@ -10,7 +11,7 @@ outfile = open(outfilename, 'w')
 pdfpairs = []
 
 pdfpair = []
-for pdf in os.popen('ls pdf_{}/*.pdf | grep -v Comme'.format(dtag)).readlines():
+for pdf in os.popen('ls {}pdf_{}/*.pdf | grep -v Comme'.format(dirname,dtag)).readlines():
     # outfile.write(r'\clearpage' + '\n')
     print(pdf)
     pdfname = pdf[:-1]

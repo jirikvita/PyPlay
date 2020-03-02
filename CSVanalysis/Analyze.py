@@ -724,7 +724,7 @@ def main(argv):
         Pies.append(pie)
         # HACK
         if filtername == 'All':
-           for False and nReqLines in range(446, nLines, 10):
+           for nReqLines in range(461, nLines, 10):
               print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
               nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)
               allResults.append(results2)

@@ -2,15 +2,18 @@
 
 import os, sys
 
-dtag = 'Comments'
+dirname1='ResultsNonTrolled/'
+dirname2='ResultsFullTrolled/'
+ftag = 'Trolling'
+dtag = 'All'
 
-outfilename = 'results_{}.tex'.format(dtag)
+outfilename = 'results_{}.tex'.format(ftag)
 outfile = open(outfilename, 'w')
 
 pdfpairs = []
 
 
-for pdf in os.popen('ls pdf_{}/*.pdf | grep -v 29_Comment'.format(dtag)).readlines():
+for pdf in os.popen('ls {}pdf_{}/*.pdf | grep -v 29_Comment'.format(dirname1,dtag)).readlines():
     # outfile.write(r'\clearpage' + '\n')
     print(pdf)
     cmntpdfname = pdf[:-1]
@@ -23,10 +26,10 @@ for pdfname in pdfpairs:
     outfile.write(r'\begin{tabular}{cc}')
     outfile.write(r'% _____________________________________________________________________ %' + '\n')
     name0 = pdfname[0]
-    name1 = pdfname[1]
+    name1 = pdfname[1].replace(dirname1, dirname2)
     outfile.write(r'{  \includegraphics[width=0.49\textwidth]{' + name0 + '} } & \n')
     outfile.write(r'{  \includegraphics[width=0.49\textwidth]{' + name1 + '}' + r'} \\' + '\n')
-    outfile.write(r' With comments & Without comments \\' + '\n')
+    outfile.write(r' non-Trolled & Trolled \\' + '\n')
     outfile.write(r'\end{tabular}')
     outfile.write('\n\n')
 
