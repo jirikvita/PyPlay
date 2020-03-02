@@ -2,13 +2,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[a4paper,twoside]{article}
-\author{Jiří Kvita}
-\title{Výsledky dotazníku}
 \usepackage[utf8]{inputenc}
+
+\author{Jiří Kvita, Martin Fafejta}
+\title{Výsledky dotazníku o dění na UP}
+
 %\usepackage[latin2]{inputenc} % pro iso8859-2
 %\usepackage[cp1250]{inputenc} % pro win1250
 \usepackage{graphicx,epsfig}
 \usepackage{slashed}
+\usepackage{color}
 \usepackage[czech]{babel}
 \textwidth 145mm
 \textheight 24cm
@@ -34,34 +37,146 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
+\maketitle
 
 \tableofcontents
+\newpage
+
+\section{Vznik ankety}
+
+Na základě \htmladdnormallink{\textcolor{blue}{\underline{ohlášení záměru uskutečnit anketu}}}{https://www.zurnal.upol.cz/nc/zprava-int/clanek/otazky-do-pruzkumu/} ze dne 31.1.2020 provedl následujících týdnech hlavní výběr otázek J.~Kvita a dále úpravu jejich formulací, pořadí odpovědí a velmi často také rozdělení na více otázek M.~Fafejta.
+Anketa byla ohlášena v sobotu 22.2.2020 \htmladdnormallink{\textcolor{blue}{\underline{odkazem}}}{https://forms.gle/gjpwghZehjD6pYhBA} v dopoledních hodinách \htmladdnormallink{\textcolor{blue}{\underline{na UP reflexi}}}{https://www.zurnal.upol.cz/nc/reflexe/zprava-int/clanek/dotaznik-o-deni-na-up/} a dále na \htmladdnormallink{\textcolor{blue}{\underline{dŽurnálu}}}{https://www.dzurnal.cz/index.php/2020/02/22/dotaznik-o-deni-na-up/}. Platformou ankety byla zvolena služba Google Forms, tj. stejná jako např. poslední anketa vedení UP ohledně \htmladdnormallink{\textcolor{blue}{\underline{společenské odpovědnosti UP}}}{https://docs.google.com/forms/d/e/1FAIpQLSfZWWqXgJ3FopOOAhVo8jLqp4MB4ak-IGnJqUEd1DQt8nggUA/viewform}. Anketa byla uzavřena 1.3.2020 ve 23:59.
+
+Vyšší podíl respondentů mohl jednoduše zajistit pan prorektor Petr Bilík, který ale bohužel odmítl spolupracovat se šířením ankety UP informačními kanály. Dále bohužel na UP reflexi dal tak trochu návodný komentář, že anketu lze vícenásobně vyplnit (stejně ale jako společenskoodpovědní anktu UP). Toho v jejím záměru opravdu někdo z části zneužil, ale jen s minimálním dopadem na výsledky, viz níže.
+
+Náš dotazník si nekladl za cíl být reprezentativním výzkumem, je to anketa, z které z principu nemůžeme získat zobecnitelná data, nicméně odráží názory přes 700 respondentů, které jsme oslovili jak na UP na platformě UP reflexe tak i mimo UP. Jak bylo zmíněno, vedení UP nám bohužel odmítlo pomoci se šířením oficiálními univerzitními kanály, které by mohly zajistit ještě vyšší míru zastoupení dalších fakult a širšího spektra respondentů.
+
+Odpovědi jsme podle výsledků a komentářů získali evidentně z celého názorového spektra. Někteří tazatelé měli samozřejmě jiný názor na výběr a zmínili i svůj názor o zaujatosti některých položených otázek. Netvrdíme tedy, že naše anketa a práce byla kompletní či bez chyby, nicméně záměr anketu vytvořit a nabídka možnosti aktivně se na její tvorbě podílet byl avizován na UP reflexi už 31.1.2020. Anketu spolu vytvořili J. Kvita (PřF) a M. Fafejta (FF). Nebráníme se další spolupráci na tvorbě ankety podporované RUP, pokud s iniciativou začne samo vedení.
+
+
+\section{Věrohodnost odpovědí}
+\label{sec:Sel}
+Pro AS UP jsme ve středu ráno 26.2.2020 zaslali analýzu \htmladdnormallink{\textcolor{blue}{\underline{průběžných výsledků ankety}}}{http://jointlab.upol.cz/kvita/dotaznik/results_prelim_for_ASUP/}, včetně porovnání výsledků s a bez komentáře.
+Motivací pro tuto studii byla skutečnost, že pole komentář nebylo do cca 500 sesbíraných odpovědí povinné, a respondenti je připojovali v cca 1/4 případů. Předpoklad byl takový, že po zavedení povinného pole komentáře na konci dotazníku by měla klesnout případná angažovanost možných opakovaně vyplňujích anonymních účastníků, jakkoli počáteční frekvence odpovědí spíše indikuje počáteční nadšení zájemců ankety se zúčastnit ihned po zveřejnění. 
+
+Objevily se však jasné známky toho, že tzv. "trollení", tj. cílené vyplňování dotazníku s cílem ovlivnit výsledky, se objevilo od cca odpovědí 630 a dále, od dopoledne 28.2.2020, a to na základě krátkodobého nárůstu četnosti odpovědí v anketě, která již byla jinak nasycena, viz Obr.~\ref{fig:troll_indication}. Jakkoli jsme odstranili odpovědi s identickými komentáři, často přicházející v pravidelných intervalem 1.5 minuty či jindy 5 min, tak nadále zůstává podezření, že výsledky ke konci ankety jsou z části nereprezentativní. Srovnání výsledků bez a po odstranění trollingu viz Doplněk~\ref{sec:trolling}.
+
+Z toho důvodu již srovnání "s a bez komentáře" (viz Doplněk~\ref{sec:comments}) nesplňuje původní myšlenku testu zaujatosti, možná že právě naopak. Respektujeme nicméně možnost, že se příznivci ústavu ankety začali účastnit až později, a výsledky od 630 do 766 výže ponecháváme (ovšem po odstranění jasných duplicit a v čase nahuštěného trollení, a to celkem 87 odpovědí). 
+
+
+% _____________________________________________________________________ %
+\begin{figure}[!h]
+\begin{tabular}{cc}
+{  \includegraphics[width=0.49\textwidth]{ResultsNonTrolled/pdf_All/00.pdf} } & 
+{  \includegraphics[width=0.49\textwidth]{ResultsFullTrolled/pdf_All/00.pdf}} \\
+ non-Trolled & Trolled \\
+
+\end{tabular}
+\caption{Indikace trollingu v čase, histogram času odpovědí: vlevo bez repetitivních či v čase nahuštěných odpovědí u konce platnosti ankety, vpravo všechny odpovědi.}
+\label{fig:troll_indication}
+\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Výsledky dotazníku}
+\section{Testy stability}
 
+\subsection{Časový vývoj}
+\htmladdnormallink{\textcolor{blue}{\underline{Animované GIFy}}}{http://jointlab.upol.cz/kvita/dotaznik/anim/} -- doporučujeme prohlédnout si v prohlížeči na pevném internetovém připojení, jde o stránku s cca 100 MB animovaných GIFů:) Odpovědi jsou stabilní vůči tomu, kdy se odkaz na anketu objevil nejprve na UP reflexi a později na dŽurnálu, což indikuje i časová stabilita výsledků vůči tomu, odkud se respondenti o anketě dozvěděli. Velmi podobné výsledky jsou znát již od stadia 200 respondentů až k závěru.
 
+\subsection{Srovnání výsledků bez a po odstranění trollingu}
+Srovnání výsledků bez a po odstranění trollingu viz Doplněk~\ref{sec:trolling}.
 
-%\includegraphics[width=0.33\textwidth]{} &
+\subsection{Srovnání výsledků s a bez komentáře}
+Srovnání výsledků s a bez komentáře viz Doplněk~\ref{sec:comments}.
 
-\input{results_All}
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Osobní komentář}
+Je smutné, k jak negativním emocem až nenávisti jsme došli.
+Pokud má daná osoba zájem, nabízím osobní setkání, nebo ať prosím nad sebou alespoň zamyslí, zda trollení dotazníku je čestným způsobem, jak podpořit vznik VŠÚ. Např. v intervalu půldruhé minuty někdo evinedentně cílil anketu změnit od 28.02.2020 10:12:18, dále od 28.02.2020 18:01:20
+Zřejmě nevěděl(a), že graficky výsledky zpracujeme sami a že je velmi jednoduché trollení poznat dle komentářů.
+Pokud někdo anketu neuvítal, stačilo zaškrtnout příslušnou položku. Zde bychom rádi podotkli, že jméno jednoho z autorů jest Kvita a nikoli Kvíta, jak 3x jeden z respondentů uvedl s dalšími injektivami v komentářích:-) S pozdravem, Jiří Dno Kocour Kuriozita:)
 
 
 \newpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Výsledky dotazníku}
+Výsledky ankety byly dle CVS souboru staženého z Google Forms analyzovány vlastním SW v jazyce {\tt Python3} a použitím knihovem {\tt pyplot}.
+Bavy odpovědí jsou dány sestupným pořadím v jejich četnosti.
+Bylo ověřeno, že celkové výsledky dávají stejné grafické "koláčové grafy'' jako je vygenerovaný grafický výstup ankety na Google Forms.
+Kód je \htmladdnormallink{\textcolor{blue}{\underline{k dispozici zde}}}{http://jointlab.upol.cz/kvita/dotaznik/code} (nebyl však testován mimo OS Linux).
+
+\subsection{Komentář k výsledkům}
+Demografie -- dotazník vyplnilo od soboty 22.2.2020 10:00 do nedělního večera 1.3.2020 765 respondentů, z nichž 678 bylo shledáno unikátních, viz dizkuze v Sekci~\ref{sec:Sel}.
+\begin{itemize}
+  \item 30\% respondentů tvoří ženy.
+  \item 60\% respondentů je z PřF, po 10\% pak z LF a FF či RUP + ostatní složky fakulty, 10\% osoby mimo UP.
+  \item 16\%, 8\% a 4\% tvoří PhD, Mgr a Bc studenti.
+  \item 11\% jsou mladší a 37\% starší výzkumníci, 16\% THP/administrativní pracovníci.
+  \item Přes 80\% respondentů anketu uvítala, a přes 90\% chce znát výsledky.
+  \item komentář připojila $1/2$ respondentů.
+\end{itemize}
+
+Vybrané odpovědi na konkrétní otázky
+\begin{itemize}
+  \item Dostatečně informovaných (UP informačními kanály) se cítí 60\% respondentů, 35\% málo či vůbec.
+  \item 85\% respondentů  dění okolo VŠÚ považuje za celouniverzitní záležitost, jen 8\% za věc několika fakult.
+  \item Přes 80\% je nespokojeno se způsobem řešení vzniku VŠÚ, spokojeno je jen 10\%, 
+  \item 45\% respondentů by váhalo projevit veřejně a neanonymně svůj názor, 47\% by neváhalo, zbytek dle tématu.
+  \item Přes 75\% respondentů se domnívá, že některé etické kauzy je potřeba vyřešit před vznikem VŠÚ, 16\% naopak.
+  \item Současné etické kauzy nepokládá za dobře řešené 88\% respondentů.
+  \item $1/2$ by uvítala ombudsmana, $1/4$ nemá vyhraněný názor.
+  \item 75\% bohužel považuje vedení UP za zaujaté, a to jak v etických kauzách, tak v řešení vzniku VŠÚ.
+  \item Transparentnost u vedení UP shledává jen 16\% respondentů, 75\% naopak.
+  \item 52\% (33\%) vidí UP jako místo s místem vážnými (určitými) problémy, jen 6\% bez problémů.
+  \item Pro vznik VŠÚ je 19\%, dalších 28\% po dořešení otázek, proti je 40\%, jasný názor nemá 12\%.
+    \\ Trollovaná plná verze ankety:
+    \\ Pro vznik VŠÚ je 27\%, dalších 25\% po dořešení otázek, proti je 35\%, jasný názor nemá 11\%.
+  \item 30\% má pocit, že se může pro vstup svobodně rozhodnout, 12\% že ne, 57\% neví/netýká se jich to.
+  \item Pokud by měli možnost, tak do VŠÚ chce vstoupit 14\%, 10\% ne za současných podmínek, 30\% nechce, 40\% neví/netýká se jich to.
+    \\ Trollovaná plná verze ankety:
+    \\ Pokud by měli možnost, tak do VŠÚ chce vstoupit 23\%, 9\% ne za současných podmínek, 28\% nechce, 35\% neví/netýká se jich to.
+  \item Komentáře dále také odhalují strach respondentů se veřejně vyjádřit, a většinou i uvítání ankety, ale také kritické připomínky k volbě otázek, zatímco jiné zase otázky vítají.
+\end{itemize}
+
+\subsection{Hlavní výsledky}
+Hlavní výsledky jsou uvedeny v sekci~\ref{sec:results}.
+Vybrané komentáře jsou k nalezení \htmladdnormallink{\textcolor{blue}{\underline{na této stránce stránce}}}{http://jointlab.upol.cz/kvita/dotaznik/comments/}.
+
+\bigskip
+
+\noindent Snad bude akademické obci a vedení UP anketa jako jistý barometr nálady na UP užitečná.
+
+\bigskip
+
+Se srdečným pozdravem
+
+V Olomouci dne 3.3.2020
+
+Jiří Kvita a Martin Fafejta
+
+
+
+
+\newpage
+\section{Hlavní výsledky}
+\label{sec:results}
+\input{results_All}
+
+
+\appendix
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Srovnání výsledků bez a s trollingem}
+\label{sec:trolling}
 \input{results_Trolling}
 
 
 \newpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Srovnání výsledků s a bez komentářů}
+\label{sec:comments}
 \input{results_Comments}
-
-%\begin{itemize}
-%  \item
-% \item
-%\end{itemize}
 
 \end{document}
 

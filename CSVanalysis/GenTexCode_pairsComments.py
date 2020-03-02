@@ -21,8 +21,8 @@ for pdf in os.popen('ls {}pdf_{}/*.pdf | grep -v 29_Comment'.format(dirname,dtag
 
 for pdfname in pdfpairs:    
     print(pdfname)
-    outfile.write(r'\begin{tabular}{cc}')
     outfile.write(r'% _____________________________________________________________________ %' + '\n')
+    outfile.write(r'\begin{tabular}{cc}' + '\n')
     name0 = pdfname[0]
     name1 = pdfname[1]
     outfile.write(r'{  \includegraphics[width=0.49\textwidth]{' + name0 + '} } & \n')

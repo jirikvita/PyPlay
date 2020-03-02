@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
-# jk 23.2.2020, PRG->FRK->GVA
-
-#from __future__ import print_function
+# jk 23.2.2020
 
 # based on https://realpython.com/python-csv/
 # https://matplotlib.org/gallery/lines_bars_and_markers/barh.html#sphx-glr-gallery-lines-bars-and-markers-barh-py
@@ -11,32 +9,6 @@
 # https://docs.python.org/3/howto/sorting.html
 # https://stackoverflow.com/questions/29672375/histogram-in-matplotlib-time-on-x-axis
 # https://matplotlib.org/3.1.1/api/dates_api.html
-
-# try also https://docs.python.org/3/library/csv.html ?
-# plotting: try
-# https://matplotlib.org/3.1.1/gallery/pie_and_polar_charts/pie_and_donut_labels.html#sphx-glr-gallery-pie-and-polar-charts-pie-and-donut-labels-py
-
-#####
-# MUST replace in cvs file Děkujeme.... to "Comment"!!!
-# Beware! a double key 'Současné etické kauzy na UP' !
-#                      'Jsem'
-# ...to be always manualy fixed in csv file!;)
-# also rektorát => rektorátu :)
-
-# TODO:
-# check jsem Muz 1 count difference?
-# add option to skip if no comment provided!!!
-
-# Ideas / TODOs:
-# check identical answers
-#   or answers identical up to 4 responses out of the 31 Q's
-# think of correlations! e.g. eticke kauzy vs vstup do ustavu
-# make and print a big correlation table?;-)
-# animace prubehu v case? ;-)
-
-# fix header of bar plots, fix Informace...
-
-# problem: order in legend depends on how and when met the answer?
 
 import csv, os, sys
 
@@ -89,6 +61,7 @@ kTimeStamp = 'Timestamp'
 toSkip = [kComment,
           # kTimeStamp
          ]
+
 toSkip2d = [kComment,
             kTimeStamp,
             barCharts[0], barCharts[2],
@@ -723,8 +696,9 @@ def main(argv):
         pie = plotresults(filtername, results, nLines)
         Pies.append(pie)
         # HACK
-        if filtername == 'All':
-           for nReqLines in range(461, nLines, 10):
+        if FALSE and filtername == 'All':
+           #  create many partial results ong for anim gifs
+           for nReqLines in range(6, nLines, 10):
               print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
               nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)
               allResults.append(results2)
