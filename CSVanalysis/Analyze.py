@@ -614,8 +614,6 @@ def plotresults(dirname, results, nLines, nReqLines = -1, nmaxSegments = 8):
          }
          fig.subplots_adjust(**margins)
          y_pos = np.arange(len(data))
-         #performance = 3 + 10 * np.random.rand(len(data))
-         #error = np.random.rand(len(data))
          itag = str(ikey)
          if ikey < 10:
             itag = '0' + itag
@@ -696,8 +694,8 @@ def main(argv):
         pie = plotresults(filtername, results, nLines)
         Pies.append(pie)
         # HACK
-        if FALSE and filtername == 'All':
-           #  create many partial results ong for anim gifs
+        if False and filtername == 'All':
+           #  create many partial result pngs for anim gifs
            for nReqLines in range(6, nLines, 10):
               print('### Processing filter {}, iteration {}'.format(filtername, nReqLines))
               nLines2,results2 = makeResults(filename, filtername, Filters[filtername], nReqLines)
