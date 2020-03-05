@@ -493,8 +493,8 @@ def makeResults(filename, filtername, Filter, nReqLines = -1):
 
 
     print('*** Processed {:} lines.'.format(line_count))
-    #print('*** The results and counts are:')
-    #print(results)
+    print('*** The results and counts are:')
+    print(results)
     return line_count,results
     
 
@@ -502,8 +502,8 @@ def makeResults(filename, filtername, Filter, nReqLines = -1):
 ##############################################################
 
 def func(pct, allvals):
-    absolute = int(pct/100.*np.sum(allvals))
-    return "{:.1f}%\n({:d})".format(pct, absolute)
+    absolute = int(round(pct/100.*np.sum(allvals)))
+    return "{:.1f}%\n({:})".format(pct, absolute)
 
 ##############################################################
 
@@ -674,6 +674,7 @@ def main(argv):
                 #'NonMuzi' :    { 'Jsem' : [ccondition('muž', False, '')] },
                 #'Zeny' :    { 'Jsem' : [ccondition('žena', True, '')] },
                 #'PrF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ] },
+                #'LF' :     { 'Jsem z fakulty / odjinud' : [ ccondition('LF', True, '') ] },
                 #'MuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', True, '')] },
                 #'nonMuziPrF' : { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', True, '') ], 'Jsem' : [ccondition('muž', False, '')] },
                 #'nonPrF' :  { 'Jsem z fakulty / odjinud' : [ ccondition('PřF', False, '')] },
