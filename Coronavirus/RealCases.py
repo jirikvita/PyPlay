@@ -58,7 +58,7 @@ Data = [ ['20.1.2020', 282, 6],
          [ '2.3.2020', [80174, 8774], [2915, 128]],
          [ '3.3.2020', [80304, 10566], [2946, 166]],
          [ '4.3.2020', [80422, 12668], [2984, 214]],
-         #[ '5.3.2020', [, ], [, ]],
+         [ '5.3.2020', [80565 , 14768], [3015, 267]],
         #[ '6.3.2020', [, ], [, ]],
         #[ '7.3.2020', [, ], [, ]],
         #[ '8.3.2020', [, ], [, ]],
@@ -174,13 +174,16 @@ gr_cases[0].GetYaxis().SetRangeUser(3., gr_cases[0].GetYaxis().GetXmax()*10.)
            
 dgr_cases = []
 dgr_deaths = []
-for gr_case, gr_death, tag in zip(gr_cases, gr_deaths, tags):
+lsts = [1, 2, 4]
+for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
     dgr_case = MakeDerivative(gr_case)
     dgr_case.SetLineColor(gr_case.GetLineColor())
     dgr_case.SetLineWidth(2)
+    dgr_case.SetLineStyle(lst)
     dgr_death = MakeDerivative(gr_death)
     dgr_death.SetLineColor(gr_death.GetLineColor())
     dgr_death.SetLineWidth(2)
+    dgr_death.SetLineStyle(lst)
     dgr_cases.append(dgr_case)
     dgr_deaths.append(dgr_death)
 
