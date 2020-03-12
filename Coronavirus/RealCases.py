@@ -28,7 +28,8 @@ mst = range(20, 50)
 lsts = range(1, 30)
 tags = ['Global', 'China', 'non-China', 'Korea', 'Japan', 'Italy', 'Deutch', 'Czech', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
 toFitIndices = range(3,10)
-#toFitIndices = [5, 6, 7]
+toFitIndices = [5, 6, 7,]
+###toFitIndices = [7,]
 # not to add to the non-China sum twice:
 skipIndices = range(3,13)
 # for prediction:
@@ -185,6 +186,7 @@ canCountries.cd()
 ig = 0
 ifit = 0
 h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, -10, 55, 500, 1., 5.e5)
+###h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 1000, 0, 55, 500, 1., 5.e2)
 h2.SetStats(0)
 h2.SetTitle('')
 h2.Draw()
@@ -210,7 +212,7 @@ for tag,gr_case in zip(tags,gr_cases):
         #text.Draw()
         #stuff.append(text)
         legFit.AddEntry(gr_case, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f} a={:1.2f}'.format(chi2/ndf, fit_case.GetParameter(1)), 'PL' )
-
+        stuff.append([fit_case, gr_case])
         ifit = ifit+1
     ig = ig+1
 legFit.Draw()
@@ -251,6 +253,6 @@ canCountries.Print('CoronavirusCases_Countries_liny.png')
 ROOT.gPad.SetLogy()
 canCountries.Print('CoronavirusCases_Countries_logy.png')
 
-stuff.append([can_cases, can_deaths, canCountries, gr_deaths, gr_cases, leg])
+stuff.append([can_cases, can_deaths, canCountries, gr_deaths, gr_cases, leg, legFit])
 
 ROOT.gApplication.Run()

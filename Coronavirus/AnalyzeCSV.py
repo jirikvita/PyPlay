@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # Thu 12 Mar 12:20:43 CET 2020
+# using data from https://github.com/CSSEGISandData/COVID-19
+
 
 from __future__ import print_function
 
@@ -9,6 +11,11 @@ import os, sys, getopt
 
 cans = []
 stuff = []
+
+kThr = 4
+
+kAcceptProvinces = ['', 'Hubei' ,'UK' ,'British Columbia' ,'Washington' ,'France']
+
 
 ##########################################
 def MakeGraphs(fname):
@@ -20,7 +27,7 @@ def MakeGraphs(fname):
     for xline in csvfile.readlines():
         iline = iline + 1
         line = xline[:-1]
-        items = line.split(',')[:-1]
+        items = line.split(',')
         if iline == 0:
             dates = items[4:]
             continue
@@ -29,7 +36,7 @@ def MakeGraphs(fname):
         province,state = items[0], items[1]
 
         # skip provinces for the moment
-        if province != '' and province != 'Hubei' and province != 'UK':
+        if province not in kAcceptProvinces:
             continue
         print(items)
         gname = '{}{}'.format(province,state)
@@ -39,8 +46,10 @@ def MakeGraphs(fname):
         ip = 0
         id = 0
         for date,sval in zip(dates,vals):
+            if sval[-1] == '\r':
+                sval = sval[:-1]
             val = int(sval)
-            if val > 0:
+            if val > kThr:
                 graph.SetPoint(ip, id+1, val)
                 err = sqrt(val)
                 graph.SetPointError(ip, 0, err)
@@ -101,37 +110,54 @@ def main(argv):
     ROOT.gPad.SetLogy(1)
     ROOT.gPad.SetGridy(1)
     ROOT.gPad.SetGridx(1)
-    h2 = ROOT.TH2D("tmp", "tmp;days;Cases", 100, -40, 55, 500, 1., 1.e5)
+    h2 = ROOT.TH2D("tmp", "tmp;days;Cases", 100, -30, 55, 500, 1., 1.e5)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.Draw()
     countries = []
-    CountriesToPlot = [ 'Hubei China', 'Italy', 'Germany', 'France', 'Spain', 'Japan', 'Korea South', 'Czechia', 'UK United Kingdom']
-    leg = ROOT.TLegend(0.12, 0.52, 0.34, 0.88)
+    CountriesCols = { 'Hubei China'     : [ ROOT.kRed,       20],
+                        'Italy'         : [ ROOT.kBlack,     21],
+                        'Germany'       : [ ROOT.kBlue,      22],
+                        'France France' : [ ROOT.kGreen,   23],
+                        'Spain'         : [ ROOT.kViolet,    24],
+                        'Czechia'       : [ ROOT.kOrange+10, 25],
+                        'Austria'       : [ ROOT.kTeal,      26],
+                        'Hungary'       : [ ROOT.kPink,      27],
+                        'Slovakia'      : [ ROOT.kAzure+4,   28],
+                        'Japan'         : [ ROOT.kMagenta,   29],
+                        'Korea South'   : [ ROOT.kSpring,    30],
+                        'UK United Kingdom'       : [ ROOT.kBlue+2,    31],
+                        'Iran'                    : [ ROOT.kGray+2,    32],
+                        'Thailand'                : [ ROOT.kRed+2,     33],
+                        'British Columbia Canada' : [ ROOT.kYellow+2 , 34], # 'Washington US'
+    }
+    CountriesToPlot = []
+    for country in CountriesCols:
+        CountriesToPlot.append(country)
+    leg = ROOT.TLegend(0.12, 0.12, 0.34, 0.88)
+    leg.SetBorderSize(0)
     
     for gname in graphs:
         countries.append(gname)
     print(countries)
-    cols = [ROOT.kRed, ROOT.kBlack, ROOT.kBlue, ROOT.kGreen+2, ROOT.kViolet,
-            ROOT.kOrange+10, ROOT.kTeal, ROOT.kPink, ROOT.kAzure+4, ROOT.kMagenta,
-            ROOT.kSpring, ROOT.kBlue+2, ROOT.kGray+2]
     
     msts = range(20, 50)
     lsts = range(1, 30)
 
     ig = -1
-    for gname in graphs:
-        if gname not in CountriesToPlot:
+    for country in graphs:
+        if country not in CountriesToPlot:
             continue
-        graph = graphs[gname]
+        graph = graphs[country]
         ig = ig + 1
-        graph.SetMarkerColor(cols[ig])
-        graph.SetLineColor(cols[ig])
-        graph.SetMarkerStyle(msts[ig])
+        graph.SetMarkerColor(CountriesCols[country][0])
+        graph.SetLineColor(CountriesCols[country][0])
+        graph.SetMarkerStyle(CountriesCols[country][1])
         graph.SetMarkerSize(1)
-        leg.AddEntry(graph, gname, 'PL')
+        leg.AddEntry(graph, country, 'PL')
         graph.Draw(opt)
     leg.Draw()
+    stuff.append(graphs)
     stuff.append(leg)
     ROOT.gPad.Update()
     ROOT.gApplication.Run()
