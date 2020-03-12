@@ -27,10 +27,39 @@ def MakeDerivative(gr):
     y2 = ROOT.Double()
     for i in range(0,gr.GetN()-1):
         gr.GetPoint(i, x1, y1)
-        gr.GetPoint(i+1, x2, y2)
+        gr.GetPoint(i + 1, x2, y2)
         der = (y2-y1) / (x2-x1)
         x = 0.5*(x1+x2)
         dgr.SetPoint(i, x, der)
+        # err = ...
+        # dgr.SetPointError(i, x, err)
+    return dgr
+
+#########################################
+def CopyStyle(g1, g2):
+    g2.SetLineColor(g1.GetLineColor())
+    g2.SetLineStyle(g1.GetLineStyle())
+    g2.SetLineWidth(g1.GetLineWidth())
+    g2.SetMarkerStyle(g1.GetMarkerStyle())
+    g2.SetMarkerSize(g1.GetMarkerSize())
+    g2.SetMarkerColor(g1.GetMarkerColor())
+
+#########################################
+def MakeSeqRatio(gr):
+    dgr = ROOT.TGraph()
+    x1 = ROOT.Double()
+    y1 = ROOT.Double()
+    x2 = ROOT.Double()
+    y2 = ROOT.Double()
+    i = 0
+    for ii in range(0,gr.GetN()-1):
+        gr.GetPoint(ii, x1, y1)
+        gr.GetPoint(ii + 1, x2, y2)
+        if y1 > 0.:
+            val = y2 / y1
+            x = 0.5*(x1+x2)
+            dgr.SetPoint(i, x, val)
+            i = i + 1
     return dgr
 
 #########################################
