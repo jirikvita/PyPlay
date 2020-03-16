@@ -14,8 +14,8 @@ cans = []
 stuff = []
 
 kMinCasesToPlot = 4
-kLastDaysToFit = 7
-kLastDaysToFitShort = 3
+kLastDaysToFit = 14
+kLastDaysToFitShort = 7
 kHistoryDay0 = 30
 
 kAcceptProvinces = ['', 'Hubei', 'Hong Kong' ,'United Kingdom' ,'British Columbia' ,'Washington' ,'France'] # 
