@@ -26,10 +26,10 @@ cols = [ROOT.kRed, ROOT.kBlack, ROOT.kBlue, ROOT.kGreen+2, ROOT.kViolet,
 
 mst = range(20, 50)
 lsts = range(1, 30)
-tags = ['Global', 'China', 'non-China', 'Korea', 'Japan', 'Italy', 'Deutch', 'Czech', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
+tags = ['Global', 'China', 'non-China', 'Korea', 'Japan', 'Italy', 'Germany', 'Czech', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
 toFitIndices = range(3,10)
-toFitIndices = [5, 6, 7,]
-toFitIndices = [7,]
+#toFitIndices = [5, 6, 7,]
+#toFitIndices = [7,]
 # not to add to the non-China sum twice:
 skipIndices = range(3,13)
 # for prediction:
@@ -91,7 +91,7 @@ for data in Data:
     ipds[0] = ipds[0]+1
 
 canname = 'CanCases'
-can_cases = ROOT.TCanvas(canname, canname)
+can_cases = ROOT.TCanvas(canname, canname, 0, 0, 1189,844)
 can_cases.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
@@ -170,15 +170,16 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
     dgr_death.Draw('L')
 
     if ig in toFitIndices:
-
+        x2 = 60
+        x1 = x2 - 5
         fitname = gr_case.GetName() + '_fit'
-        fit_case = ROOT.TF1(fitname, '[0]*exp([1]*(x-[2]))')
+        fit_case = ROOT.TF1(fitname, '[0]*exp([1]*(x))', x1, x2)
         fit_case.SetLineColor(gr_case.GetMarkerColor())
         fit_case.SetLineStyle(2)
-        fit_case.SetParameters(1., 0.3, 40.)
+        fit_case.SetParameters(1., 0.3)
         fit_cases.append(fit_case)
         gr_case.GetYaxis().SetMoreLogLabels()
-        gr_case.Fit(fitname)
+        gr_case.Fit(fitname, '', '', x1, x2)
         for ep in evalPoints:
             print('Est. cases  in day {}: {:4.0f}'.format(ep, fit_case.Eval(1.*ep)))
             
@@ -192,7 +193,7 @@ h2.SetTitle('')
 h2.Draw()
 opt = 'P'
 icol = -1
-legFit = ROOT.TLegend(0.12, 0.16, 0.60, 0.85)
+legFit = ROOT.TLegend(0.12, 0.46, 0.40, 0.85)
 legFit.SetBorderSize(0)
 for tag,gr_case in zip(tags,gr_cases):
     icol = icol+1
