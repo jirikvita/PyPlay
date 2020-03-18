@@ -44,7 +44,7 @@ def MakeHistos(nTotIters):
             histo.GetXaxis().SetBinLabel(key2+1, gKeyNames[key2])
     name = 'h_age'
     title = ';age;people'
-    n = 40
+    n = 25
     histo = ROOT.TH1D(name, title, n, 0, gmaxAge)
     histo.SetFillColor(gCols[key])
     histo.SetFillColor(ROOT.kBlue)
@@ -53,7 +53,7 @@ def MakeHistos(nTotIters):
     return histos
     
 #########################################
-def MakeAttractors(world):
+def MakeAttractors(world, speed):
     attractors = []
     # some manually placed attractors
     # center:
@@ -64,10 +64,11 @@ def MakeAttractors(world):
     hwy = (world.GetYmax() - world.GetYmin()) / 2.
     rmin = 0.02*gkm
     rmax = 10*gkm # exceeds the world radius, attractor works for all practical distances
-    speed = 2 # exceeding factor over random walk speed
     sf = 0.55 # scale factor
     attractors.append(cattractor(sx-sf*hwx, sy-sf*hwy, rmin, rmax, speed))
     attractors.append(cattractor(sx+sf*hwx, sy+sf*hwy, rmin, rmax, speed))
+    attractors.append(cattractor(sx+sf*hwx, sy-sf*hwy, rmin, rmax, speed))
+    attractors.append(cattractor(sx-sf*hwx, sy+sf*hwy, rmin, rmax, speed))
     return attractors
 
 #########################################
@@ -87,10 +88,8 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
           status = gInfected
         # TODO!
         # randomize attractors for family members!
-        randx = rand.Uniform(0., 1.)
-        randi = 0
-        if randx > 0.5:
-            randi = 1
+        randx = rand.Uniform(0., len(attractors)-1)
+        randi = int(round(randx))
         # so far support only one attractor per person in a list
         family.append(cperson(id, age, x, y, [attractors[randi]], status, 0, 0, 0))
     Family = cfamily(family, x, y)
@@ -202,11 +201,8 @@ def MakeStep(world, families, attractors, params):
                           mem.SetStatus(gHealed)
 
                   elif mem.GetStatus() == gInfected:
-                      # randomly get sick from infected
-                      tau = params.GetIncubationTime()
-                      # TO FINISH!!! NO, KEEP the SICK turning probability as below;-)
-                      #if rand.Uniform(0,1) > 1./tau*exp(-world.GetDay() / tau):
-                      if rand.Uniform(0,1) < 0.00001:
+                      # turn sick from infected
+                      if rand.Uniform(0,1) < params.GetSickTurnProb():
                           mem.SetStatus(gSick)
 
              
@@ -232,6 +228,7 @@ def ShowWorld(world, attractors, nPeople):
       stuff.append(circ)
   # draw age
   world.GetCan()[2][0].cd()
+  #ROOT.gPad.SetLogy(1)
   if world.GetDay() == 0 and world.GetStep() == 0:
       Age_h = world.GetHistos()['age']
       cloneAge_h = Age_h.Clone('age_h_initial')
@@ -240,6 +237,7 @@ def ShowWorld(world, attractors, nPeople):
       cloneAge_h.SetFillStyle(0)
       print('Initial age mean: {:}'.format(cloneAge_h.GetMean()))
       world.GetHistos()['iage'] = cloneAge_h
+  #world.GetHistos()['iage'].SetMinimum(1.)
   world.GetHistos()['iage'].Draw('hist')
   world.GetHistos()['age'].Draw('histsame')
   
@@ -267,12 +265,13 @@ def ShowWorld(world, attractors, nPeople):
           if 'Iter' in key:
               #hkey = MakeIterHkey(key)
               histo = world.GetHistos()[key]
-              print('Drawing {}'.format(key))
-              histo.SetMinimum(0.)
+              #print('Drawing {}'.format(key))
+              histo.SetMinimum(1.)
               histo.SetMaximum(nPeople)
-              print(histo.GetBinContent(1))
+              #print(histo.GetBinContent(1))
               histo.Draw('P' + sameopt)
               sameopt = 'same'
+              ROOT.gPad.SetLogy(1)
       except:
           pass
 
@@ -305,7 +304,7 @@ def DrawFamilies(world, families):
   return markers
 
 #########################################
-def Draw(world, families, attractors, nPeople):
+def Draw(world, families, attractors, nPeople, tag):
 
     ShowWorld(world, attractors, nPeople)
 
@@ -331,7 +330,7 @@ def Draw(world, families, attractors, nPeople):
     #wtxt.Draw()
     
     #stuff.append(txt)
-    world.GetCan()[0].Print(world.GetCan()[0].GetName() + '_day{:}_step{:}.png'.format(sday, sstep))
+    world.GetCan()[0].Print(world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
     
     return
 
@@ -400,30 +399,27 @@ def main(argv):
     randSpeedX = 0.005*gkm
     randSpeedY = 0.005*gkm
 
-    nDays = 6 # 30
-    nTimeSteps = 172
+    nDays = 20 # 6; 30
+    nTimeSteps = 50 # 172
     nTotIters = nDays*nTimeSteps
     histos = MakeHistos(nTotIters)
     
     # attractor indices [0,1] symbolize home and world
     world = cworld(can, histos, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, gCols, gMarks, [0, 1])
 
-    attractors = MakeAttractors(world)
+    speed = 6 # 2 exceeding factor over random walk speed
+    attractors = MakeAttractors(world, speed)
 
     # TODO:
     # define gInfected
     # add ndays sick to cperson!
     # add exponencial death prob!
-    # tau = 5
-    # add heal probability after some steps
-    # tauheal =
 
     # TODOS:
     # watch ages histos of each category and plot them, too
     # keep and the write and plot some summaries
     # like numbers of all the categories in each day and step!
     # write this also to a file for further analysis and plotting;-)
-    # TO FINISH the exp. distribution
     # make some people immune?
     # FINISH the super spreaders
     # mark by lines also initial and current mean age
@@ -431,6 +427,8 @@ def main(argv):
     # later: enable mutations, heal from certain stem, but can be infected by a new one
     # pads, histograms, age, death prob. age dependent...
     # death prob below age:
+
+    # enable septums, quaranteene, some fraction of people who break it
     
     acan, gr_ageDeathFact, fit_ageDeathFact = MakeAgeDeathFact()
     stuff.append([acan, gr_ageDeathFact, fit_ageDeathFact])
@@ -447,30 +445,31 @@ def main(argv):
     # make also the heal prob. age dependent?
     # create functions for these!
     
-    # TO USE!!!
-    # exp() param
-    getWellTime = 2
-    maxDaysSick = 4
+    # TO USE?
+    # maxDaysSick = 4
 
-    incubationTime = 1002 # days
+    # probs per step
+    # tragic scenario parameters, Jan-Feb-March 2020
+    #sickTurnProb = 0.00001
+    #healProb     = 0.0000005
+    #deathProb    = 0.00000065
 
-    healProb  = 0.0000005
-    deathProb = 0.00000065 # per step
+    # probs per step
+    sickTurnProb = 0.00001
+    healProb     = 0.000005
+    deathProb    = 0.000003 # per step
 
-    spreadFrequency = 0.015 # transmission prob. per encounter within radius
-    spreadRadius = 0.025*gkm
-    superSpreadFraction = 0.01 # out of sick
+    transmissionProb = 0.015 # transmission prob. per encounter within radius
+    spreadRadius = 0.020*gkm # 0.025
+    superSpreadFraction = 0.01 # out of sick TO USE!
     initialSickFraction = 0.05
-    # ageDeathFact = 0.3
-    # affect people speed by age?
     
-    params = cparams(spreadFrequency, spreadRadius, deathProb, healProb,
-                     getWellTime, incubationTime,
-                     superSpreadFraction, initialSickFraction, maxDaysSick,
+    params = cparams(transmissionProb, spreadRadius, deathProb, healProb, sickTurnProb,
+                     superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    Nfamilies = 500
-    nAverInFamily = 3.5
+    Nfamilies = 200    # 500
+    nAverInFamily = 3. # 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
 
@@ -478,12 +477,13 @@ def main(argv):
     # LOOP! #
     #########
     nPeople = CountPeople(families)
-    
+
+    tag = 'MoreProbable'
     for day in xrange(0, nDays):
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
-            Draw(world, families, attractors, nPeople)
+            Draw(world, families, attractors, nPeople, tag)
             world.PrintStatus(families)
             MakeStep(world, families, attractors, params)
             world.IncStep()

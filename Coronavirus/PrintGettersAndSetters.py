@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 #cname = 'cparams'
-#members = ['spreadFrequency', 'spreadRadius', 'deathProb', 'healProb', 'getWellTime', 'incubationTime', 'superSpreadFraction', 'initialSickFraction', 'maxDaysSick', 'ageDeathFact', 'maxAge']
+#members = ['transmissionProb', 'spreadRadius', 'deathProb', 'healProb', 'sickTurnProb', 'superSpreadFraction', 'initialSickFraction', 'maxDaysSick', 'ageDeathFact', 'maxAge']
 
 #cname = 'cattractor'
 #members = ['x', 'y', 'rmin', 'rmax', 'strength']
