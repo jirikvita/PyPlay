@@ -29,7 +29,7 @@ lsts = range(1, 30)
 tags = ['Global', 'China', 'non-China', 'Korea', 'Japan', 'Italy', 'Deutch', 'Czech', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
 toFitIndices = range(3,10)
 toFitIndices = [5, 6, 7,]
-###toFitIndices = [7,]
+toFitIndices = [7,]
 # not to add to the non-China sum twice:
 skipIndices = range(3,13)
 # for prediction:
@@ -185,7 +185,7 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
 canCountries.cd()
 ig = 0
 ifit = 0
-h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, -10, 65, 500, 1., 5.e5)
+h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, -10, 65, 5000, 1., 5.e5)
 ###h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 1000, 0, 55, 500, 1., 5.e2)
 h2.SetStats(0)
 h2.SetTitle('')

@@ -12,6 +12,37 @@ cans = []
 stuff = []
 
 #########################################
+
+def MakeAgeDeathFact():
+    # data: https://www.vox.com/2020/3/12/21173783/coronavirus-death-age-covid-19-elderly-seniors
+    acan = ROOT.TCanvas()
+    acan.cd()
+    print('Fitting age death fact')
+    deathprobDict = { 9: 0.01e-2, 19: 0.02e-2, 29: 0.09e-2, 39: 0.18e-2, 49: 0.40e-2, 59: 1.3e-2, 69: 4.6e-2, 79: 9.8e-2, 85: 18e-2}
+    gr_ageDeathFact = ROOT.TGraphErrors()
+    ip = 0
+    x0 = 0.
+    ages = []
+    for age in deathprobDict:
+        ages.append(age)
+    ages.sort()
+    for age in ages:
+        print(x0, age)
+        errSF = 0.10 # arb. fractional error for better fit behaviour
+        gr_ageDeathFact.SetPoint(ip, 0.5 * (age + x0), deathprobDict[age])
+        gr_ageDeathFact.SetPointError(ip, 0., errSF*deathprobDict[age])
+        x0 = 1.*age
+        ip += 1
+    gr_ageDeathFact.SetMarkerStyle(20)
+    gr_ageDeathFact.SetMarkerSize(1)
+    gr_ageDeathFact.SetMarkerColor(ROOT.kBlack)
+    fit_ageDeathFact = ROOT.TF1('myexp', '[0]*exp([1]*x)+[2]', 0, 100)
+    fit_ageDeathFact.SetParameters(0.001, 0.01, 0.)
+    gr_ageDeathFact.Fit('myexp')
+    gr_ageDeathFact.Draw('AP')
+    return acan, gr_ageDeathFact, fit_ageDeathFact
+
+#########################################
 def CountPeople(families):
     n = 0
     for fam in families:

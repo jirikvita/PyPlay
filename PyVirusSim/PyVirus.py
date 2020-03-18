@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
+# c.f. https://www.washingtonpost.com/graphics/2020/world/corona-simulator/
+
 # https://stackoverflow.com/questions/50311406/how-to-draw-a-random-sample-from-a-poisson-distribution
 import numpy as np
-
 
 # Jiri Kvita 26.1.2020
 # Sun 26 Jan 18:44:50 CET 2020

@@ -192,7 +192,10 @@ def MakeStep(world, families, attractors, params):
                                   othermem.SetStatus(gInfected)
                   
                       # try randomly die:
-                      if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
+                      # old; if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
+                      refAge = 40.
+                      ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
+                      if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
                           mem.SetStatus(gDead)
                           # try randomly heal:
                       elif rand.Uniform(0,1) < params.GetHealProb():
@@ -427,6 +430,11 @@ def main(argv):
     
     # later: enable mutations, heal from certain stem, but can be infected by a new one
     # pads, histograms, age, death prob. age dependent...
+    # death prob below age:
+    
+    acan, gr_ageDeathFact, fit_ageDeathFact = MakeAgeDeathFact()
+    stuff.append([acan, gr_ageDeathFact, fit_ageDeathFact])
+    
     # also control histos of how long people were infectious, sick, healthy before getting sick
     
     # allow treatment from some day in some areas?
@@ -453,11 +461,13 @@ def main(argv):
     spreadRadius = 0.025*gkm
     superSpreadFraction = 0.01 # out of sick
     initialSickFraction = 0.05
-    ageDeathFact = 0.3
-
+    # ageDeathFact = 0.3
     # affect people speed by age?
     
-    params = cparams(spreadFrequency, spreadRadius, deathProb, healProb, getWellTime, incubationTime, superSpreadFraction, initialSickFraction, maxDaysSick, ageDeathFact, gmaxAge)
+    params = cparams(spreadFrequency, spreadRadius, deathProb, healProb,
+                     getWellTime, incubationTime,
+                     superSpreadFraction, initialSickFraction, maxDaysSick,
+                     fit_ageDeathFact, gmaxAge)
 
     Nfamilies = 500
     nAverInFamily = 3.5
