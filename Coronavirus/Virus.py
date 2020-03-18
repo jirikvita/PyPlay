@@ -313,7 +313,7 @@ def Draw(world, families, attractors, nPeople, tag):
     
     sday = MakeDigitStr(world.GetDay(),2)
     sstep = MakeDigitStr(world.GetStep(),2)
-    sss = 'day {:} step {:}'.format(sday, sstep)
+    sss = 'Day {:} Step {:}'.format(sday, sstep)
     
     world.GetCan()[2][2].cd()
     txt = ROOT.TLatex(0.12, 0.92, sss)
@@ -399,7 +399,7 @@ def main(argv):
     randSpeedX = 0.005*gkm
     randSpeedY = 0.005*gkm
 
-    nDays = 20 # 6; 30
+    nDays = 30 # 6; 30
     nTimeSteps = 50 # 172
     nTotIters = nDays*nTimeSteps
     histos = MakeHistos(nTotIters)
@@ -456,7 +456,7 @@ def main(argv):
 
     # probs per step
     sickTurnProb = 0.00001
-    healProb     = 0.000005
+    healProb     = 0.000008
     deathProb    = 0.000003 # per step
 
     transmissionProb = 0.015 # transmission prob. per encounter within radius
@@ -468,6 +468,8 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
+    tag = '_MoreProbableFasterBetter'
+    params.PrintParamsToFile(tag)
     Nfamilies = 200    # 500
     nAverInFamily = 3. # 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
@@ -478,7 +480,6 @@ def main(argv):
     #########
     nPeople = CountPeople(families)
 
-    tag = 'MoreProbable'
     for day in xrange(0, nDays):
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
