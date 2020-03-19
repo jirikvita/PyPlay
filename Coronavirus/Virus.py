@@ -87,6 +87,8 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
         status = gHealthy
         if rand.Uniform(0,1) < params.GetInitialSickFraction():
           status = gInfected
+          if rand.Uniform(0,1) < params.GetSuperSpreadFraction():
+              status = gSuperSpreader
         # TODO!
         # randomize attractors for family members!
         randx = rand.Uniform(0., len(attractors)-1)
@@ -135,12 +137,13 @@ def MovePerson(world, family, person):
     # get the destintion coordinates and compute vector to move along
     destX = 0
     destY = 0
-    if world.GetAttractorIndex()[0] == 0:
+    # move to an attractor, but quaranteened people go and stay home!
+    if world.GetAttractorIndex()[0] == 0 and person.GetStatus() != gQuarantine:
         # go to the attractor
         destX = person.GetAttractors()[0].GetX() # ? world.GetAttractorIndex()[0]
         destY = person.GetAttractors()[0].GetY()
     else:
-        # go home
+        # go home, these are family coordinates
         destX = family.GetX0()
         destY = family.GetY0()
     vect = [destX - x, destY - y]
@@ -182,26 +185,25 @@ def MakeStep(world, families, attractors, params):
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   mem.SetStatus(gInfected)
 
-                  elif mem.GetStatus() == gSick:
-                      # and randomly infect
-                      if othermem.GetStatus() == gHealthy:
+                  elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader:
+                      # and randomly infect, but only wen not in quarantene!
+                      if mem.GetStatus != gQuarantine and othermem.GetStatus() == gHealthy:
                           # can infect only healthy people;-)
                           distance = ComputeDistance(mem, othermem)
                           if distance < params.GetSpreadRadius():
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   othermem.SetStatus(gInfected)
                   
-                      # try randomly die:
-                      # old; if rand.Uniform(0,1) < params.GetDeathProb()*(1. + params.GetAgeDeathFact()*mem.GetAge()/params.GetMaxAge()):
                       refAge = 40.
                       ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
-                      if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
-                          mem.SetStatus(gDead)
-                          # try randomly heal:
-                      elif rand.Uniform(0,1) < params.GetHealProb():
-                          mem.SetStatus(gHealed)
+                      if mem.GetStatus() != gSuperSpreader:
+                          if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
+                              mem.SetStatus(gDead)
+                              # try randomly heal:
+                          elif rand.Uniform(0,1) < params.GetHealProb():
+                              mem.SetStatus(gHealed)
 
-                  elif mem.GetStatus() == gInfected:
+                  elif mem.GetStatus() == gInfected and mem.GetStatus() != gSuperSpreader:
                       # turn sick from infected
                       if rand.Uniform(0,1) < params.GetSickTurnProb():
                           mem.SetStatus(gSick)
@@ -314,7 +316,7 @@ def Draw(world, families, attractors, nPeople, tag):
     
     sday = MakeDigitStr(world.GetDay(),2)
     sstep = MakeDigitStr(world.GetStep(),2)
-    sss = 'Day {:} Step {:}'.format(sday, sstep)
+    sss = 'day {:} step {:}'.format(sday, sstep)
     
     world.GetCan()[2][2].cd()
     txt = ROOT.TLatex(0.12, 0.92, sss)
@@ -429,7 +431,15 @@ def main(argv):
     # pads, histograms, age, death prob. age dependent...
     # death prob below age:
 
-    # enable septums, quaranteene, some fraction of people who break it
+    # TODOs
+    # enable septums
+
+    # TESTING:
+    # current quarantene model makes sick people not to ifect other by a status
+    # they are also forced go and stay home, but they do not infect already on the way home
+    # and when home; we do still allow some fraction of people who break it and move around
+    
+    # enable veils to decrease transmissionProb
     
     acan, gr_ageDeathFact, fit_ageDeathFact = MakeAgeDeathFact()
     stuff.append([acan, gr_ageDeathFact, fit_ageDeathFact])
@@ -462,16 +472,16 @@ def main(argv):
 
     transmissionProb = 0.015 # transmission prob. per encounter within radius
     spreadRadius = 0.020*gkm # 0.025
-    superSpreadFraction = 0.01 # out of sick TO USE!
     initialSickFraction = 0.05
+    superSpreadFraction = 0.10 # out of sick TO USE!
     
     params = cparams(transmissionProb, spreadRadius, deathProb, healProb, sickTurnProb,
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_MoreProbableFasterBetter'
+    tag = '_SuperSpreadAndQuaranteen'
     params.PrintParamsToFile(tag)
-    Nfamilies = 200    # 500
+    Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
 
@@ -481,8 +491,14 @@ def main(argv):
     #########
     nPeople = CountPeople(families)
 
+    # to move to params:
+    quarantineDay = 1 # nDays / 3
+    qfrac = 0.8
+    
     for day in xrange(0, nDays):
         world.SetStep(0)
+        if day >= quarantineDay:
+            ApplyQuarantine(families, world.GetRand(), qfrac)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
             Draw(world, families, attractors, nPeople, tag)

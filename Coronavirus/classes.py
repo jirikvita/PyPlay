@@ -12,24 +12,28 @@ gSick = 2
 gSuperSpreader = 3
 gDead = 4
 gHealed = 5
+gQuarantine = 6
 
 gmaxAge = 100
 
 gCols = { gHealthy : ROOT.kBlack,
-         gSick : ROOT.kGreen+2,
-         gSuperSpreader : ROOT.kGreen + 2,
-         gDead : ROOT.kRed,
-         gInfected : ROOT.kAzure + 7,
-         gHealed : ROOT.kBlack}
+          gSick : ROOT.kGreen+2,
+          gSuperSpreader : ROOT.kGreen,
+          gDead : ROOT.kRed,
+          gInfected : ROOT.kAzure + 7,
+          gHealed : ROOT.kBlack,
+          gQuarantine : ROOT.kMagenta}
 gMarks = { gHealthy : 20,
-          gSick : 21,
-          gSuperSpreader : 29,
-          gDead : 34,
-          gInfected : 20,
-          gHealed : 24}
+           gSick : 21,
+           gSuperSpreader : 29,
+           gDead : 34,
+           gInfected : 20,
+           gHealed : 24,
+           gQuarantine : 25}
 
-gKeys = [gHealthy, gInfected, gSick, gSuperSpreader, gDead, gHealed]
-gKeyNames = { gHealthy : 'healthy', gInfected : 'infected', gSick : 'sick', gSuperSpreader : 'super-spreaders', gDead : 'dead', gHealed : 'healed'}
+# watched and counted cases
+gKeys = [gHealthy, gInfected, gSick, gSuperSpreader, gDead, gHealed, gQuarantine]
+gKeyNames = { gHealthy : 'healthy', gInfected : 'infected', gSick : 'sick', gSuperSpreader : 'super-spreaders', gDead : 'dead', gHealed : 'healed', gQuarantine : 'quaranteened'}
 
 #########################################
 
@@ -41,7 +45,16 @@ def RemoveIterHkey(key):
     return rkey.replace('_Iter','')
 
 #########################################
+def ApplyQuarantine(families, rand, qfraction = 0.90):
+    for fam in families:
+        for mem in fam.GetMembers():
+            if mem.GetStatus() == gSick and rand.Uniform(0,1) < qfraction:
+                mem.SetStatus(gQuarantine)
+    return    
 
+#########################################
+# can be more efficient to count all statuses in one loop!
+# TODO
 def Count(families, status):
     n = 0
     for fam in families:

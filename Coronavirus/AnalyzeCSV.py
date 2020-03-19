@@ -6,6 +6,8 @@
 #,Czechia,49.8175,15.473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,5,8,12,19,26,32,38,63,94,113,141,189,298,383,434
 #,Czechia,49.8175,15.473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,5,8,12,19,26,32,38,63,94,113,141,189,293,344
 
+# TODO: clicable page with linear scale date from each country!
+
 from __future__ import print_function
 
 import ROOT
@@ -16,8 +18,8 @@ cans = []
 stuff = []
 
 kMinCasesToPlot = 4
-kLastDaysToFit = 14
-kLastDaysToFitShort = 7
+kLastDaysToFit = 7
+kLastDaysToFitShort = 4
 kHistoryDay0 = 30
 
 kAcceptProvinces = ['', 'Hubei', 'Hong Kong' ,'United Kingdom' ,'British Columbia' ,'Washington' ,'France'] # 
@@ -82,7 +84,7 @@ def MakeGraphs(fname):
                 ip = ip + 1
             id = id + 1
         graphs[gname] = graph
-    return graphs
+    return graphs,dates
 
 ##########################################
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
@@ -132,10 +134,33 @@ def main(argv):
     can = ROOT.TCanvas(canname, canname, 0, 0, 1390,844)
     cans.append(can)
 
-    filename = 'time_series_19-covid-Confirmed.csv'
-    graphs = MakeGraphs(filename)
+    canname = 'ConfirmedCasesLiny'
+    canlin = ROOT.TCanvas(canname, canname, 0, 0, 1200, 800)
+    cans.append(canlin)
 
-    
+    filename = 'time_series_19-covid-Confirmed.csv'
+    graphs,dates = MakeGraphs(filename)
+
+    dates = dates[-1].split('/')
+    dd = dates[1]
+    mm = dates[0]
+    yy = dates[2][:-1]
+    yy = '20' + yy
+    if int(dd) < 10:
+        dd = '0' + dd
+    if int(mm) < 10:
+        mm = '0' + mm
+    tag = '{}{}{}'.format(yy,mm,dd)
+    ltag = 'John Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
+
+    nx = 5
+    ny = 3
+    canlin.Divide(nx,ny)
+    for i in range(nx*ny):
+        canlin.cd(i+1)
+        ROOT.gPad.SetGridy(1)
+        ROOT.gPad.SetGridx(1)
+
     can.cd()
     ROOT.gPad.SetLogy(1)
     ROOT.gPad.SetGridy(1)
@@ -143,7 +168,7 @@ def main(argv):
 
     Xmax = 5.
     Xmin = -95
-    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 100, Xmin, Xmax, 1000, kMinCasesToPlot, 5.e4)
+    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 100, Xmin, Xmax, 1000, kMinCasesToPlot, 9.e4)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.GetYaxis().SetMoreLogLabels()
@@ -167,13 +192,15 @@ def main(argv):
                       'UK'       : [ ROOT.kBlue+2,    22],
                       'Iran'                    : [ ROOT.kBlue-2,    23],
                       'Thailand'                : [ ROOT.kRed+2,     29],
-                      'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
+                      'Switzerland' : [ ROOT.kYellow+2 , 33], # 'Washington US'
+                      #'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
     }
     CountriesToPlot = []
     for country in CountriesCols:
         CountriesToPlot.append(country)
     leg = ROOT.TLegend(0.115, 0.12, 0.34, 0.88)
     leg.SetBorderSize(0)
+    leg.SetHeader(ltag)
     
     for gname in graphs:
         countries.append(gname)
@@ -191,23 +218,24 @@ def main(argv):
     # fits exp. params
     fitsa = {}
     fitsashort = {}
+    ipad = 1
     for country in graphs:
         if country not in CountriesToPlot:
             continue
         graph = graphs[country]
         ig = ig + 1
+        can.cd()
         graph.SetMarkerColor(CountriesCols[country][0])
         graph.SetLineColor(CountriesCols[country][0])
         graph.SetMarkerStyle(CountriesCols[country][1])
         graph.SetMarkerSize(1)
-        fit = ROOT.TF1('fit_{}'.format(country), '[0]*exp([1]*(x-[2]))', xmin, xmax)
+        fit = ROOT.TF1('fit_{}'.format(country), '[0]*exp([1]*x)', xmin, xmax)
         fit.SetLineColor(graph.GetMarkerColor())
         fit.SetLineStyle(1)
-        fit.SetParameters(1., 0.3, xmin)
+        fit.SetParameters(1., 0.3)#, xmin)
         fits[country] = fit
         graph.Fit(fit, "", "", xmin, xmax)
         fitsa[country] = fit.GetParameter(1)
-
         drawHistoricFit = False
         if country == 'Korea South' or country == 'Iran' or country == 'Italy':
             drawHistoricFit = True
@@ -216,7 +244,7 @@ def main(argv):
             xx1 = -graphs['Hubei China'].GetN() + kHistoryDay0
             xx2 = xx1 + kLastDaysToFit - 0.5
             print('*** OK, Running an historic fit for {} between days {} and {} ***'.format(country, xx1, xx2))
-            fit_hist = ROOT.TF1('fit_hist_{}'.format(country), '[0]*exp([1]*(x-[2]))', xx1, xx2) # xmin - off, xmax - off)
+            fit_hist = ROOT.TF1('fit_hist_{}'.format(country), '[0]*exp([1]*x)', xx1, xx2) # xmin - off, xmax - off)
             fit_hist.SetLineColor(graph.GetMarkerColor())
             fit_hist.SetLineStyle(1)
             xx = ROOT.Double()
@@ -225,7 +253,7 @@ def main(argv):
             graphs[country].GetPoint(iday, xx, yy)
             aguess = 0.3
             print('Setting parameters from point {} to {} {} {}'.format(iday, yy, aguess, xx))
-            fit_hist.SetParameters(yy, aguess, xx)
+            fit_hist.SetParameters(yy, aguess)#, xx)
             fits_history[country] = fit_hist
             graph.Fit(fit_hist, "", "", xx1, xx2) #xmin - off, xmax - off)
             chi2,ndf = GetChi2Ndf(fit_hist)
@@ -234,24 +262,47 @@ def main(argv):
         # last days fit
         xx1 = -kLastDaysToFitShort  + 0.5
         xx2 = xmax
-        fit2 = ROOT.TF1('fit2_{}'.format(country), '[0]*exp([1]*(x-[2]))', xx1, xx2) # xmin - off, xmax - off)
+        fit2 = ROOT.TF1('fit2_{}'.format(country), '[0]*exp([1]*x)', xx1, xx2) # xmin - off, xmax - off)
         fit2.SetLineColor(graph.GetMarkerColor())
         fit2.SetLineStyle(1)
         fit2.SetLineStyle(2)
-        fit2.SetParameters(1., 0.3, xx1)
+        fit2.SetParameters(1., 0.3)#, xx1)
         fits2[country] = fit2
         graph.Fit(fit2, "", "", xx1, xx2) #xmin - off, xmax - off)
         fitsashort[country] = fit2.GetParameter(1)
-        leg.AddEntry(graph, country + ' a_{' + '{:}'.format(kLastDaysToFit) + '}=' + '{:1.2f}'.format(fitsa[country]) + ' a_{' + '{}'.format(kLastDaysToFitShort) + '}' + '={:1.2f}'.format(fitsashort[country]), 'PL')
+        leg.AddEntry(graph, '{:15}'.format(country) + ' a_{' + '{:}'.format(kLastDaysToFit) + '}=' + '{:1.2f}'.format(fitsa[country]) + ' a_{' + '{}'.format(kLastDaysToFitShort) + '}' + '={:1.2f}'.format(fitsashort[country]), 'PL')
         graph.Draw(opt)
         fit.Draw('same')
         fit2.Draw('same')
         if drawHistoricFit:
             fits_history[country].Draw('same')
+            
+        canlin.cd(ipad)
+        graph.Draw('AP')
+        ctxt = ROOT.TLatex(0.12, 0.82, '{}'.format(country))
+        ctxt.SetNDC()
+        ctxt.Draw()
+        ctxt.SetTextSize(0.08)
+        stuff.append(ctxt)
+        ipad += 1
+    
+    can.cd()
     leg.Draw()
     stuff.append([graphs, fits])
     stuff.append(leg)
+    
+    canlin.Update()
+    canlin.Print(canlin.GetName() + '_{}.png'.format(tag))
+    
     ROOT.gPad.Update()
+    can.Print(can.GetName() + '_{}.png'.format(tag))
+    h2.GetXaxis().SetRangeUser(-40, h2.GetXaxis().GetXmax())
+    ROOT.gPad.Update()
+    can.Print(can.GetName() + '_{}_zoom.png'.format(tag))
+    cmd='myput.py slo public_html/virus/covid-19 "{}*_{}*.png"'.format(can.GetName(),tag)
+    os.system(cmd)
+
+    
     ROOT.gApplication.Run()
     return
 

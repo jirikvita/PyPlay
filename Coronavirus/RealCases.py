@@ -5,16 +5,13 @@ import ROOT
 # jk 12.2.2020
 
 from math import sqrt, pow
-
 from Tools import *
-
 from Data import *
 
 stuff = []
-
-
 print(Data)
 
+kLastDaysToFit = 5
 
 gr_cases = []
 gr_deaths = []
@@ -29,14 +26,11 @@ lsts = range(1, 30)
 tags = ['Global', 'China', 'non-China', 'Korea', 'Japan', 'Italy', 'Germany', 'Czech', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
 toFitIndices = range(3,10)
 #toFitIndices = [5, 6, 7,]
-#toFitIndices = [7,]
+toFitIndices = [7,]
 # not to add to the non-China sum twice:
 skipIndices = range(3,13)
 # for prediction:
 evalPoints = range(55, 69)
-
-
-
 
 ndata = len(tags)
 for i in range(0,ndata):
@@ -105,7 +99,9 @@ ROOT.gPad.SetGridy()
 
 opt = 'AP'
 
+sdate = Data[-1][0]
 leg = ROOT.TLegend(0.12, 0.52, 0.34, 0.88)
+leg.SetHeader(sdate)
 for gr_case,gr_death,tag in zip(gr_cases, gr_deaths,tags):
     can_cases.cd()
     gr_case.Draw(opt)
@@ -170,10 +166,13 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
     dgr_death.Draw('L')
 
     if ig in toFitIndices:
-        x2 = 60
-        x1 = x2 - 5
+        xx = ROOT.Double()
+        yy = ROOT.Double()
+        gr_case.GetPoint(gr_case.GetN()-1, xx, yy)
+        x2 = xx + kLastDaysToFit + 0.5
+        x1 = xx - kLastDaysToFit + 0.5
         fitname = gr_case.GetName() + '_fit'
-        fit_case = ROOT.TF1(fitname, '[0]*exp([1]*(x))', x1, x2)
+        fit_case = ROOT.TF1(fitname, '[0]*exp([1]*x)', x1, x2)
         fit_case.SetLineColor(gr_case.GetMarkerColor())
         fit_case.SetLineStyle(2)
         fit_case.SetParameters(1., 0.3)
@@ -194,6 +193,7 @@ h2.Draw()
 opt = 'P'
 icol = -1
 legFit = ROOT.TLegend(0.12, 0.46, 0.40, 0.85)
+legFit.SetHeader(sdate)
 legFit.SetBorderSize(0)
 for tag,gr_case in zip(tags,gr_cases):
     icol = icol+1
@@ -206,13 +206,13 @@ for tag,gr_case in zip(tags,gr_cases):
         fit_case.Draw('same')
         chi2 = fit_case.GetChisquare()
         ndf = fit_case.GetNDF()
-        #text = ROOT.TLatex(0.15, 0.84 - ifit*0.065, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f} a={:1.2f}'.format(chi2/ndf, fit_case.GetParameter(1)) )
+        #text = ROOT.TLatex(0.15, 0.84 - ifit*0.065, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + + ' a_{' + '{:}'.formart(kLastDaysToFit)  + '}={:1.2f}'.format(fit_case.GetParameter(1)) )
         #text.SetTextSize(0.04)
         #text.SetTextColor(gr_case.GetMarkerColor())
         #text.SetNDC()
         #text.Draw()
         #stuff.append(text)
-        legFit.AddEntry(gr_case, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f} a={:1.2f}'.format(chi2/ndf, fit_case.GetParameter(1)), 'PL' )
+        legFit.AddEntry(gr_case, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1)), 'PL' )
         stuff.append([fit_case, gr_case])
         ifit = ifit+1
     ig = ig+1
