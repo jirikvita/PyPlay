@@ -479,7 +479,8 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_SuperSpreadAndQuaranteen'
+    #tag = '_SuperSpreadAndQuaranteen'
+    tag = '_SuperSpreadNoQuaranteen'
     params.PrintParamsToFile(tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
@@ -497,8 +498,8 @@ def main(argv):
     
     for day in xrange(0, nDays):
         world.SetStep(0)
-        if day >= quarantineDay:
-            ApplyQuarantine(families, world.GetRand(), qfrac)
+        ###!!!if day >= quarantineDay:
+        ###!!!    ApplyQuarantine(families, world.GetRand(), qfrac)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
             Draw(world, families, attractors, nPeople, tag)
