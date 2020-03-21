@@ -148,7 +148,7 @@ def main(argv):
     if int(mm) < 10:
         mm = '0' + mm
     tag = '{}{}{}'.format(yy,mm,dd)
-    ltag = 'John Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
+    ltag = 'Johns Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
     ltagshort = '{}.{}.{}'.format(dd,mm,yy)
 
     nx = 5

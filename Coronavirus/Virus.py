@@ -185,8 +185,8 @@ def MakeStep(world, families, attractors, params):
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   mem.SetStatus(gInfected)
 
-                  elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader:
-                      # and randomly infect, but only wen not in quarantene!
+                  elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader or mem.GetStatus() == gQuarantine:
+                      # and randomly infect, but only when not in quarantene!
                       if mem.GetStatus != gQuarantine and othermem.GetStatus() == gHealthy:
                           # can infect only healthy people;-)
                           distance = ComputeDistance(mem, othermem)
@@ -194,9 +194,9 @@ def MakeStep(world, families, attractors, params):
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   othermem.SetStatus(gInfected)
                   
-                      refAge = 40.
-                      ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
                       if mem.GetStatus() != gSuperSpreader:
+                          refAge = 40.
+                          ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
                           if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
                               mem.SetStatus(gDead)
                               # try randomly heal:
@@ -479,7 +479,7 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_SuperSpreadAndQuaranteen'
+    tag = '_SuperSpreadAndQuaranteen2'
     params.PrintParamsToFile(tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
