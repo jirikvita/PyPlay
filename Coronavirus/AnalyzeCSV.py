@@ -2,9 +2,6 @@
 # Thu 12 Mar 12:20:43 CET 2020
 # using data from https://github.com/CSSEGISandData/COVID-19
 
-#,Czechia,49.8175,15.473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,5,8,12,19,26,32,38,63,94,113,141,189,298,383,450,522
-#,Czechia,49.8175,15.473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,5,8,12,19,26,32,38,63,94,113,141,189,298,383,434
-#,Czechia,49.8175,15.473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,5,8,12,19,26,32,38,63,94,113,141,189,293,344
 
 # TODO: clicable page with linear scale date from each country!
 
@@ -151,7 +148,8 @@ def main(argv):
     if int(mm) < 10:
         mm = '0' + mm
     tag = '{}{}{}'.format(yy,mm,dd)
-    ltag = 'John Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
+    ltag = 'Johns Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
+    ltagshort = '{}.{}.{}'.format(dd,mm,yy)
 
     nx = 5
     ny = 3
@@ -174,8 +172,8 @@ def main(argv):
     h2.GetYaxis().SetMoreLogLabels()
     h2.Draw()
     countries = []
-    CountriesCols = { 'Hubei China'     : [ ROOT.kRed,       20],
-                      'Hong Kong' : [ ROOT.kGreen+3,       24],
+    CountriesCols = { 'Hubei China'   : [ ROOT.kRed,       20],
+                      'Hong Kong'     : [ ROOT.kGreen+3,       24],
                       'Italy'         : [ ROOT.kBlack,     21],
                       'Germany'       : [ ROOT.kBlue,      22],
                       'France'        : [ ROOT.kGreen+2,   23],
@@ -189,9 +187,9 @@ def main(argv):
                       'Singapore'      : [ ROOT.kMagenta+3,   23],
                       'Japan'         : [ ROOT.kMagenta,   20],
                       'Korea South'   : [ ROOT.kSpring,    21],
-                      'UK'       : [ ROOT.kBlue+2,    22],
-                      'Iran'                    : [ ROOT.kBlue-2,    23],
-                      'Thailand'                : [ ROOT.kRed+2,     29],
+                      'UK'            : [ ROOT.kBlue+2,    22],
+                      'Iran'          : [ ROOT.kBlue-2,    23],
+                      'Thailand'      : [ ROOT.kRed+2,     29],
                       'Switzerland' : [ ROOT.kYellow+2 , 33], # 'Washington US'
                       #'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
     }
@@ -279,11 +277,16 @@ def main(argv):
             
         canlin.cd(ipad)
         graph.Draw('AP')
-        ctxt = ROOT.TLatex(0.12, 0.82, '{}'.format(country))
+        ctxt = ROOT.TLatex(0.14, 0.82, '{}'.format(country))
         ctxt.SetNDC()
         ctxt.Draw()
         ctxt.SetTextSize(0.08)
         stuff.append(ctxt)
+        ctxt2 = ROOT.TLatex(0.14, 0.74, '{}'.format(ltagshort))
+        ctxt2.SetNDC()
+        ctxt2.Draw()
+        ctxt2.SetTextSize(0.08)
+        stuff.append(ctxt2)
         ipad += 1
     
     can.cd()

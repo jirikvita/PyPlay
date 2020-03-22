@@ -185,8 +185,8 @@ def MakeStep(world, families, attractors, params):
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   mem.SetStatus(gInfected)
 
-                  elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader:
-                      # and randomly infect, but only wen not in quarantene!
+                  elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader or mem.GetStatus() == gQuarantine:
+                      # and randomly infect, but only when not in quarantene!
                       if mem.GetStatus != gQuarantine and othermem.GetStatus() == gHealthy:
                           # can infect only healthy people;-)
                           distance = ComputeDistance(mem, othermem)
@@ -194,9 +194,9 @@ def MakeStep(world, families, attractors, params):
                               if rand.Uniform(0,1) < params.GetSpreadFrequency():
                                   othermem.SetStatus(gInfected)
                   
-                      refAge = 40.
-                      ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
                       if mem.GetStatus() != gSuperSpreader:
+                          refAge = 40.
+                          ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
                           if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
                               mem.SetStatus(gDead)
                               # try randomly heal:
@@ -402,7 +402,7 @@ def main(argv):
     randSpeedX = 0.005*gkm
     randSpeedY = 0.005*gkm
 
-    nDays = 30 # 6; 30
+    nDays = 60 # 6; 30
     nTimeSteps = 50 # 172
     nTotIters = nDays*nTimeSteps
     histos = MakeHistos(nTotIters)
@@ -479,8 +479,10 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    #tag = '_SuperSpreadAndQuaranteen'
-    tag = '_SuperSpreadNoQuaranteen'
+    tag = '_SuperSpreadNoQuarantene_60d'
+    #tag = '_SuperSpreadAndQuarantene0.9_60d'
+    applyQuarantene = not ('NoQuarant' in tag)
+    
     params.PrintParamsToFile(tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
@@ -494,12 +496,12 @@ def main(argv):
 
     # to move to params:
     quarantineDay = 1 # nDays / 3
-    qfrac = 0.8
+    qfrac = 0.9
     
     for day in xrange(0, nDays):
         world.SetStep(0)
-        ###!!!if day >= quarantineDay:
-        ###!!!    ApplyQuarantine(families, world.GetRand(), qfrac)
+        if applyQuarantene and day >= quarantineDay:
+            ApplyQuarantine(families, world.GetRand(), qfrac)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
             Draw(world, families, attractors, nPeople, tag)
