@@ -240,7 +240,7 @@ for tag,gr_case in zip(tags,gr_cases):
     ig = ig+1
 legFit.Draw()
 stuff.append(legFit)
-canname = 'CAnGrowth'
+canname = 'CanGrowth'
 canGrowth = ROOT.TCanvas(canname, canname, 500,500,500,500)
 canGrowth.cd()
 ROOT.gPad.SetGridx()
@@ -256,7 +256,7 @@ for gr_case,dgr_case in zip(gr_cases,dgr_cases):
     growthFact_case.Draw(opt)
     growthFact_cases.append(growthFact_case)
     opt = 'C'
-
+canGrowth.Print(canGrowth.GetName() + '.png')
 ####################################
 can_cases.cd()
 ROOT.gPad.SetLogy()

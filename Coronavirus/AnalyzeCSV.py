@@ -14,10 +14,11 @@ import os, sys, getopt
 cans = []
 stuff = []
 
-kMinCasesToPlot = 4
+kMinCasesToPlot = 10
 kLastDaysToFit = 7
 kLastDaysToFitShort = 4
 kHistoryDay0 = 30
+kShiftAxisToSameMinCases = False
 
 kAcceptProvinces = ['', 'Hubei', 'Hong Kong' ,'United Kingdom' ,'British Columbia' ,'Washington' ,'France'] # 
 
@@ -75,9 +76,13 @@ def MakeGraphs(fname):
                 sval = sval[:-1]
             val = int(sval)
             if val > kMinCasesToPlot:
-                graph.SetPoint(ip, id+1, val)
                 err = sqrt(val)
-                graph.SetPointError(ip, 0, err)
+                if kShiftAxisToSameMinCases:
+                    graph.SetPoint(ip, ip, val)
+                    graph.SetPointError(ip, 0, err)
+                else:
+                    graph.SetPoint(ip, id+1, val)
+                    graph.SetPointError(ip, 0, err)
                 ip = ip + 1
             id = id + 1
         graphs[gname] = graph
@@ -132,16 +137,16 @@ def main(argv):
     cans.append(can)
 
     canname = 'ConfirmedCasesLiny'
-    canlin = ROOT.TCanvas(canname, canname, 0, 0, 1200, 800)
+    canlin = ROOT.TCanvas(canname, canname, 0, 0, 1400, 800)
     cans.append(canlin)
 
     filename = 'time_series_19-covid-Confirmed.csv'
     graphs,dates = MakeGraphs(filename)
 
-    dates = dates[-1].split('/')
-    dd = dates[1]
-    mm = dates[0]
-    yy = dates[2][:-1]
+    sdate = dates[-1].split('/')
+    dd = sdate[1]
+    mm = sdate[0]
+    yy = sdate[2][:-1]
     yy = '20' + yy
     if int(dd) < 10:
         dd = '0' + dd
@@ -151,7 +156,7 @@ def main(argv):
     ltag = 'Johns Hopkins data as of {}.{}.{}'.format(dd,mm,yy)
     ltagshort = '{}.{}.{}'.format(dd,mm,yy)
 
-    nx = 5
+    nx = 6
     ny = 3
     canlin.Divide(nx,ny)
     for i in range(nx*ny):
@@ -165,8 +170,11 @@ def main(argv):
     ROOT.gPad.SetGridx(1)
 
     Xmax = 5.
-    Xmin = -95
-    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 100, Xmin, Xmax, 1000, kMinCasesToPlot, 9.e4)
+    Xmin = -len(dates)
+    if kShiftAxisToSameMinCases:
+        Xmin = 0
+        Xmax = len(dates)
+    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 9.e4)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.GetYaxis().SetMoreLogLabels()
@@ -183,20 +191,25 @@ def main(argv):
                       'Czechia'       : [ ROOT.kOrange+10, 33],
                       'Austria'       : [ ROOT.kTeal+3,      20],
                       #'Hungary'       : [ ROOT.kPink,      22],
-                      #'Slovakia'      : [ ROOT.kAzure+4,   23],
+                      'Slovakia'      : [ ROOT.kAzure+4,   23],
                       'Singapore'      : [ ROOT.kMagenta+3,   23],
                       'Japan'         : [ ROOT.kMagenta,   20],
                       'Korea South'   : [ ROOT.kSpring,    21],
                       'UK'            : [ ROOT.kBlue+2,    22],
                       'Iran'          : [ ROOT.kBlue-2,    23],
                       'Thailand'      : [ ROOT.kRed+2,     29],
+                      'Taiwan*'      : [ ROOT.kPink+2,     24],
                       'Switzerland' : [ ROOT.kYellow+2 , 33], # 'Washington US'
-                      #'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
+                      'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
     }
     CountriesToPlot = []
     for country in CountriesCols:
         CountriesToPlot.append(country)
-    leg = ROOT.TLegend(0.115, 0.12, 0.34, 0.88)
+
+    x1, y1, x2, y2 = 0.115, 0.12, 0.34, 0.88
+    if kShiftAxisToSameMinCases:
+        x1, y1, x2, y2 = 0.65, 0.12, 0.87, 0.88
+    leg = ROOT.TLegend(x1, y1, x2, y2)
     leg.SetBorderSize(0)
     leg.SetHeader(ltag)
     
@@ -211,8 +224,6 @@ def main(argv):
     fits = {}
     fits2 = {}
     fits_history = {}
-    xmax = Xmax
-    xmin = - kLastDaysToFit + 0.5
     # fits exp. params
     fitsa = {}
     fitsashort = {}
@@ -227,6 +238,16 @@ def main(argv):
         graph.SetLineColor(CountriesCols[country][0])
         graph.SetMarkerStyle(CountriesCols[country][1])
         graph.SetMarkerSize(1)
+
+
+        xmax = Xmax
+        xmin = - kLastDaysToFit + 0.5
+        if kShiftAxisToSameMinCases:
+            pass
+            ###TODO!!!
+            ###get really last point x-coordinate
+
+        
         fit = ROOT.TF1('fit_{}'.format(country), '[0]*exp([1]*x)', xmin, xmax)
         fit.SetLineColor(graph.GetMarkerColor())
         fit.SetLineStyle(1)
@@ -277,6 +298,7 @@ def main(argv):
             
         canlin.cd(ipad)
         graph.Draw('AP')
+        graph.GetYaxis().SetRangeUser(0., graph.GetYaxis().GetXmax())
         ctxt = ROOT.TLatex(0.14, 0.82, '{}'.format(country))
         ctxt.SetNDC()
         ctxt.Draw()

@@ -424,7 +424,7 @@ def main(argv):
     # like numbers of all the categories in each day and step!
     # write this also to a file for further analysis and plotting;-)
     # make some people immune?
-    # FINISH the super spreaders
+    # FINISH the super spreaders -- make them healthy after some time , too!
     # mark by lines also initial and current mean age
     
     # later: enable mutations, heal from certain stem, but can be infected by a new one
@@ -434,6 +434,10 @@ def main(argv):
     # TODOs
     # enable septums
 
+    # plot also a simple plot: healthy, infected(+)sick+quarantened?
+    # print also fraction of sick, dead w.r.t. original total population
+    # add bigger color coding legend
+    
     # TESTING:
     # current quarantene model makes sick people not to ifect other by a status
     # they are also forced go and stay home, but they do not infect already on the way home
