@@ -402,7 +402,7 @@ def main(argv):
     randSpeedX = 0.005*gkm
     randSpeedY = 0.005*gkm
 
-    nDays = 30 # 6; 30
+    nDays = 60 # 6; 30
     nTimeSteps = 50 # 172
     nTotIters = nDays*nTimeSteps
     histos = MakeHistos(nTotIters)
@@ -483,7 +483,10 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_SuperSpreadAndQuaranteen2'
+    tag = '_SuperSpreadNoQuarantene_60d'
+    #tag = '_SuperSpreadAndQuarantene0.9_60d'
+    applyQuarantene = not ('NoQuarant' in tag)
+    
     params.PrintParamsToFile(tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
@@ -497,11 +500,11 @@ def main(argv):
 
     # to move to params:
     quarantineDay = 1 # nDays / 3
-    qfrac = 0.8
+    qfrac = 0.9
     
     for day in xrange(0, nDays):
         world.SetStep(0)
-        if day >= quarantineDay:
+        if applyQuarantene and day >= quarantineDay:
             ApplyQuarantine(families, world.GetRand(), qfrac)
         for it in xrange(0, nTimeSteps):
             world.FillHistos(families)
