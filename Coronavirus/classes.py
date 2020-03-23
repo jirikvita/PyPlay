@@ -253,8 +253,8 @@ class cparams:
   def SetMaxAge(self, maxAge): self._maxAge = maxAge
 
   # manual:
-  def PrintParamsToFile(self, tag):
-      outfile = open('params{}.txt'.format(tag), 'w')
+  def PrintParamsToFile(self, rundir, tag):
+      outfile = open('{}params{}.txt'.format(rundir, tag), 'w')
       pars = { 'transmissionProb' : self._transmissionProb,
                'spreadRadius' : self._spreadRadius,
                'deathProb' : self._deathProb,

@@ -338,7 +338,7 @@ def Draw(world, families, attractors, nPeople, tag):
     #wtxt.Draw()
     
     #stuff.append(txt)
-    world.GetCan()[0].Print(world.tagdir + world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
+    world.GetCan()[0].Print(world.rundir + world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
     
     return
 
@@ -498,10 +498,10 @@ def main(argv):
     tag = '_SuperSpreadAndQuarantene0.98often_noSuper_60d'
     applyQuarantene = not ('NoQuarant' in tag)
 
-    world.tagdir = 'run{}/'.format(tag)
-    os.system('mkdir -p {}'.format(world.tagdir))
+    world.rundir = 'run{}/'.format(tag)
+    os.system('mkdir -p {}'.format(world.rundir))
     
-    params.PrintParamsToFile(tag)
+    params.PrintParamsToFile(world.rundir,tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
