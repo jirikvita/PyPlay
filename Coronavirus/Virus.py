@@ -333,7 +333,7 @@ def Draw(world, families, attractors, nPeople, tag):
     #wtxt.Draw()
     
     #stuff.append(txt)
-    world.GetCan()[0].Print(world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
+    world.GetCan()[0].Print(world.tagdir + world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
     
     return
 
@@ -437,14 +437,20 @@ def main(argv):
     # plot also a simple plot: healthy, infected(+)sick+quarantened?
     # print also fraction of sick, dead w.r.t. original total population
     # add bigger color coding legend
+
+    # increase mortality above some fraction, to simulate overwhelmed ECI
+    # make healthy suscpetible to infection again
+    # simulate collateral damage?
+    # enable veils to decrease transmissionProb
+    # save pngs to a dir based on tag
+
+    # implement concentrated regins, allow some poeple to meet many more people, e.g. going around families and switch attractors
     
     # TESTING:
     # current quarantene model makes sick people not to ifect other by a status
     # they are also forced go and stay home, but they do not infect already on the way home
     # and when home; we do still allow some fraction of people who break it and move around
-    
-    # enable veils to decrease transmissionProb
-    
+        
     acan, gr_ageDeathFact, fit_ageDeathFact = MakeAgeDeathFact()
     stuff.append([acan, gr_ageDeathFact, fit_ageDeathFact])
     
@@ -486,6 +492,9 @@ def main(argv):
     tag = '_SuperSpreadNoQuarantene_60d_noSuper'
     #tag = '_SuperSpreadAndQuarantene0.98twice_noSuper_60d'
     applyQuarantene = not ('NoQuarant' in tag)
+
+    world.tagdir = 'run{}/'.format(tag)
+    os.system('mkdir -p {}'.format(world.tagdir))
     
     params.PrintParamsToFile(tag)
     Nfamilies = 300    # 500
