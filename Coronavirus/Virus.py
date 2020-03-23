@@ -494,8 +494,8 @@ def main(argv):
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_SuperSpreadNoQuarantene_60d_noSuper'
-    #tag = '_SuperSpreadAndQuarantene0.98twice_noSuper_60d'
+    #tag = '_SuperSpreadNoQuarantene_60d_noSuper'
+    tag = '_SuperSpreadAndQuarantene0.98often_noSuper_60d'
     applyQuarantene = not ('NoQuarant' in tag)
 
     world.tagdir = 'run{}/'.format(tag)
@@ -519,7 +519,7 @@ def main(argv):
     for day in xrange(0, nDays):
         world.SetStep(0)
         for it in xrange(0, nTimeSteps):
-            if applyQuarantene and (it == nTimeSteps-1 or it ==nTimeSteps/2):
+            if applyQuarantene and (it == nTimeSteps-1 or nTimeSteps/10 == 0):
                 ApplyQuarantine(families, world.GetRand(), qfrac)
             world.FillHistos(families)
             Draw(world, families, attractors, nPeople, tag)

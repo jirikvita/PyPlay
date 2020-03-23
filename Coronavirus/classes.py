@@ -48,7 +48,7 @@ def RemoveIterHkey(key):
 def ApplyQuarantine(families, rand, qfraction = 0.90):
     for fam in families:
         for mem in fam.GetMembers():
-            if mem.GetStatus() == gSick and rand.Uniform(0,1) < qfraction:
+            if mem.GetStatus() == gSick and rand.uniform(0,1) < qfraction:
                 mem.SetStatus(gQuarantine)
     return    
 
