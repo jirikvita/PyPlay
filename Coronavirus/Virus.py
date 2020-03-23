@@ -485,7 +485,7 @@ def main(argv):
     healProb     = 0.000008
     deathProb    = 0.000003 # per step
 
-    transmissionProb = 0.015 # transmission prob. per encounter within radius
+    transmissionProb = 0.005 # was: 0.015 transmission prob. per encounter within radius
     spreadRadius = 0.020*gkm # 0.025
     initialSickFraction = 0.05
     superSpreadFraction = 0.0 # 0.10 out of sick TO USE!
@@ -495,7 +495,8 @@ def main(argv):
                      fit_ageDeathFact, gmaxAge)
 
     #tag = '_SuperSpreadNoQuarantene_60d_noSuper'
-    tag = '_SuperSpreadAndQuarantene0.98often_noSuper_60d'
+    #tag = '_SuperSpreadAndQuarantene0.98often_noSuper_lessSpread_60d'
+    tag = '_SuperSpreadNoQuarantene_noSuper_lessSpread_60d'
     applyQuarantene = not ('NoQuarant' in tag)
 
     world._rundir = 'run{}/'.format(tag)
@@ -529,7 +530,7 @@ def main(argv):
         world.IncDay(families)
 
     if len(world._rundir) > 0:
-        tarfile = '{}.tgz'.formar(world._rundir[:-1])
+        tarfile = '{}.tgz'.format(world._rundir[:-1])
         print ('Done, creating {}...'.format(tarfile))
         os.system('tar czf {} {}'.format(tarfile, rundir))
     
