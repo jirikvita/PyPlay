@@ -477,14 +477,14 @@ def main(argv):
     transmissionProb = 0.015 # transmission prob. per encounter within radius
     spreadRadius = 0.020*gkm # 0.025
     initialSickFraction = 0.05
-    superSpreadFraction = 0.10 # out of sick TO USE!
+    superSpreadFraction = 0.0 # 0.10 out of sick TO USE!
     
     params = cparams(transmissionProb, spreadRadius, deathProb, healProb, sickTurnProb,
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    tag = '_SuperSpreadNoQuarantene_60d'
-    #tag = '_SuperSpreadAndQuarantene0.9_60d'
+    tag = '_SuperSpreadNoQuarantene_60d_noSuper'
+    #tag = '_SuperSpreadAndQuarantene0.98twice_noSuper_60d'
     applyQuarantene = not ('NoQuarant' in tag)
     
     params.PrintParamsToFile(tag)
@@ -500,13 +500,13 @@ def main(argv):
 
     # to move to params:
     quarantineDay = 1 # nDays / 3
-    qfrac = 0.9
+    qfrac = 0.98
     
     for day in xrange(0, nDays):
         world.SetStep(0)
-        if applyQuarantene and day >= quarantineDay:
-            ApplyQuarantine(families, world.GetRand(), qfrac)
         for it in xrange(0, nTimeSteps):
+            if applyQuarantene and (it == nTimeSteps-1 or it ==nTimeSteps/2):
+                ApplyQuarantine(families, world.GetRand(), qfrac)
             world.FillHistos(families)
             Draw(world, families, attractors, nPeople, tag)
             world.PrintStatus(families)
@@ -515,7 +515,8 @@ def main(argv):
         world.IncDay(families)
 
     print ('DONE!;-)')
-    ROOT.gApplication.Run()
+    if not gBatch:
+        ROOT.gApplication.Run()
 
     return
 #########################################
