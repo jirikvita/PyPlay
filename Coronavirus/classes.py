@@ -108,7 +108,8 @@ class cworld:
     self._cols = cols
     self._marks = marks
     self._attractorIndex = attractorIndex
-
+    self._rundir = ''
+    
   def GetCan(self): return self._can
   def GetHistos(self): return self._histos
   def GetDay(self): return self._day

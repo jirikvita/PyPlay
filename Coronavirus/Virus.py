@@ -338,7 +338,7 @@ def Draw(world, families, attractors, nPeople, tag):
     #wtxt.Draw()
     
     #stuff.append(txt)
-    world.GetCan()[0].Print(world.rundir + world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
+    world.GetCan()[0].Print(world._rundir + world.GetCan()[0].GetName() + '_day{:}_step{:}{:}.png'.format(sday, sstep, tag))
     
     return
 
@@ -498,10 +498,10 @@ def main(argv):
     tag = '_SuperSpreadAndQuarantene0.98often_noSuper_60d'
     applyQuarantene = not ('NoQuarant' in tag)
 
-    world.rundir = 'run{}/'.format(tag)
-    os.system('mkdir -p {}'.format(world.rundir))
+    world._rundir = 'run{}/'.format(tag)
+    os.system('mkdir -p {}'.format(world._rundir))
     
-    params.PrintParamsToFile(world.rundir,tag)
+    params.PrintParamsToFile(world._rundir,tag)
     Nfamilies = 300    # 500
     nAverInFamily = 3. # 3.5
     families = MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax)
@@ -528,6 +528,11 @@ def main(argv):
             world.IncStep()
         world.IncDay(families)
 
+    if len(world._rundir) > 0:
+        tarfile = '{}.tgz'.formar(world._rundir[:-1])
+        print ('Done, creating {}...'.format(tarfile))
+        os.system('tar czf {} {}'.format(tarfile, rundir))
+    
     print ('DONE!;-)')
     if not gBatch:
         ROOT.gApplication.Run()
