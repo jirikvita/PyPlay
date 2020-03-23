@@ -6,6 +6,11 @@
 import ROOT
 import os, sys, getopt
 
+# https://stackoverflow.com/questions/50311406/how-to-draw-a-random-sample-from-a-poisson-distribution
+import numpy as np
+
+import random
+
 from classes import *
 from Tools import *
 
@@ -76,22 +81,22 @@ def MakeAttractors(world, speed):
 def MakeFamily(world, attractors, params, x, y, nAverInFamily):
     family = []
     rand = world.GetRand()
-    for im in range(0, rand.Poisson(nAverInFamily)):
+    for im in range(0, np.random.poisson(nAverInFamily, 2)[0]):
         id = world.YieldNewId()
         age = -1
         while age <= 0:
-            age = rand.Gaus(35, 15)
+            age = rand.gauss(35, 15)
         if age > params.GetMaxAge():
             age = params.GetMaxAge()
         # TODO: randomize x, y within family members
         status = gHealthy
-        if rand.Uniform(0,1) < params.GetInitialSickFraction():
+        if rand.uniform(0,1) < params.GetInitialSickFraction():
           status = gInfected
-          if rand.Uniform(0,1) < params.GetSuperSpreadFraction():
+          if rand.uniform(0,1) < params.GetSuperSpreadFraction():
               status = gSuperSpreader
         # TODO!
         # randomize attractors for family members!
-        randx = rand.Uniform(0., len(attractors)-1)
+        randx = rand.uniform(0., len(attractors)-1)
         randi = int(round(randx))
         # so far support only one attractor per person in a list
         family.append(cperson(id, age, x, y, [attractors[randi]], status, 0, 0, 0))
@@ -101,8 +106,8 @@ def MakeFamily(world, attractors, params, x, y, nAverInFamily):
 #########################################
 def MakeRandomXY(world):
     rand = world.GetRand()
-    x = rand.Uniform(world.GetXmin(), world.GetXmax())
-    y = rand.Uniform(world.GetYmin(), world.GetYmax())
+    x = rand.uniform(world.GetXmin(), world.GetXmax())
+    y = rand.uniform(world.GetYmin(), world.GetYmax())
     return x,y
 
 #########################################    
@@ -130,8 +135,8 @@ def EnsureReality(world, x, y):
 def MovePerson(world, family, person):
     # random move
     rand = world.GetRand()
-    x = person.GetX() + rand.Uniform(-world.GetRandSpeedX(), world.GetRandSpeedX())
-    y = person.GetY() + rand.Uniform(-world.GetRandSpeedY(), world.GetRandSpeedY())
+    x = person.GetX() + rand.uniform(-world.GetRandSpeedX(), world.GetRandSpeedX())
+    y = person.GetY() + rand.uniform(-world.GetRandSpeedY(), world.GetRandSpeedY())
 
     # move to the current attractor
     # get the destintion coordinates and compute vector to move along
@@ -182,7 +187,7 @@ def MakeStep(world, families, attractors, params):
                       if othermem.GetStatus() == gSick:
                           distance = ComputeDistance(mem, othermem)
                           if distance < params.GetSpreadRadius():
-                              if rand.Uniform(0,1) < params.GetSpreadFrequency():
+                              if rand.uniform(0,1) < params.GetSpreadFrequency():
                                   mem.SetStatus(gInfected)
 
                   elif mem.GetStatus() == gSick or mem.GetStatus() == gSuperSpreader or mem.GetStatus() == gQuarantine:
@@ -191,21 +196,21 @@ def MakeStep(world, families, attractors, params):
                           # can infect only healthy people;-)
                           distance = ComputeDistance(mem, othermem)
                           if distance < params.GetSpreadRadius():
-                              if rand.Uniform(0,1) < params.GetSpreadFrequency():
+                              if rand.uniform(0,1) < params.GetSpreadFrequency():
                                   othermem.SetStatus(gInfected)
                   
                       if mem.GetStatus() != gSuperSpreader:
                           refAge = 40.
                           ageDeathFact = params.GetAgeDeathFact().Eval(mem.GetAge()) / params.GetAgeDeathFact().Eval(refAge)
-                          if rand.Uniform(0,1) < params.GetDeathProb()*ageDeathFact:
+                          if rand.uniform(0,1) < params.GetDeathProb()*ageDeathFact:
                               mem.SetStatus(gDead)
                               # try randomly heal:
-                          elif rand.Uniform(0,1) < params.GetHealProb():
+                          elif rand.uniform(0,1) < params.GetHealProb():
                               mem.SetStatus(gHealed)
 
                   elif mem.GetStatus() == gInfected and mem.GetStatus() != gSuperSpreader:
                       # turn sick from infected
-                      if rand.Uniform(0,1) < params.GetSickTurnProb():
+                      if rand.uniform(0,1) < params.GetSickTurnProb():
                           mem.SetStatus(gSick)
 
              
@@ -408,7 +413,7 @@ def main(argv):
     histos = MakeHistos(nTotIters)
     
     # attractor indices [0,1] symbolize home and world
-    world = cworld(can, histos, 0, 0, xmin, xmax, ymin, ymax, 0, ROOT.TRandom3(), randSpeedX, randSpeedY, gCols, gMarks, [0, 1])
+    world = cworld(can, histos, 0, 0, xmin, xmax, ymin, ymax, 0, random, randSpeedX, randSpeedY, gCols, gMarks, [0, 1])
 
     speed = 6 # 2 exceeding factor over random walk speed
     attractors = MakeAttractors(world, speed)
