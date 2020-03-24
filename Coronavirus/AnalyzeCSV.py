@@ -146,8 +146,9 @@ def main(argv):
     sdate = dates[-1].split('/')
     dd = sdate[1]
     mm = sdate[0]
-    yy = sdate[2][:-1]
+    yy = sdate[2]
     yy = '20' + yy
+    print(yy,mm,dd)
     if int(dd) < 10:
         dd = '0' + dd
     if int(mm) < 10:
