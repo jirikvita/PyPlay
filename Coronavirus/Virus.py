@@ -480,23 +480,39 @@ def main(argv):
     #healProb     = 0.0000005
     #deathProb    = 0.00000065
 
-    # probs per step
-    sickTurnProb = 0.00001
+    #22.3.2020 superSpreadFraction:0.0
+    #deathProb:3e-06
+    #spreadRadius:0.02
+    #transmissionProb:0.005
+    #initialSickFraction:0.05
+    #healProb:8e-06
+    #maxAge:100
+    #sickTurnProb:1e-05
+    sickTurnProb = 0.00005
     healProb     = 0.000008
-    deathProb    = 0.000003 # per step
+    deathProb    = 0.000006 # per step
+
+    # 23.3.2020
+    # probs per step
+    #sickTurnProb = 0.000008
+    #healProb     = 0.000006
+    #deathProb    = 0.000002 # per step
 
     transmissionProb = 0.005 # was: 0.015 transmission prob. per encounter within radius
     spreadRadius = 0.020*gkm # 0.025
     initialSickFraction = 0.05
-    superSpreadFraction = 0.0 # 0.10 out of sick TO USE!
+    superSpreadFraction = 0.10 # out of sick TO USE!
     
     params = cparams(transmissionProb, spreadRadius, deathProb, healProb, sickTurnProb,
                      superSpreadFraction, initialSickFraction, 
                      fit_ageDeathFact, gmaxAge)
 
-    #tag = '_SuperSpreadNoQuarantene_60d_noSuper'
-    #tag = '_SuperSpreadAndQuarantene0.98often_noSuper_lessSpread_60d'
-    tag = '_SuperSpreadNoQuarantene_noSuper_lessSpread_60d'
+    #tag = '_SuperSpreadAndQuarantene0.98often_noSuper_lessSpread_60d_newpars'
+    #tag = '_SuperSpreadNoQuarantene_noSuper_lessSpread_60d_newpars'
+
+    tag = '_SuperSpreadAndQuarantene0.98often_Super_lessSpread_60d'
+    #tag = '_SuperSpreadNoQuarantene_Super_lessSpread_60d'
+
     applyQuarantene = not ('NoQuarant' in tag)
 
     world._rundir = 'run{}/'.format(tag)
@@ -532,7 +548,7 @@ def main(argv):
     if len(world._rundir) > 0:
         tarfile = '{}.tgz'.format(world._rundir[:-1])
         print ('Done, creating {}...'.format(tarfile))
-        os.system('tar czf {} {}'.format(tarfile, rundir))
+        os.system('tar czf {} {}'.format(tarfile, world._rundir))
     
     print ('DONE!;-)')
     if not gBatch:
