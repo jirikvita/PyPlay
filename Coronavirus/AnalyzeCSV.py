@@ -140,7 +140,7 @@ def main(argv):
     canlin = ROOT.TCanvas(canname, canname, 0, 0, 1400, 800)
     cans.append(canlin)
 
-    filename = 'time_series_19-covid-Confirmed.csv'
+    filename = 'time_series_covid19_confirmed_global.csv' # OLD: 'time_series_19-covid-Confirmed.csv'
     graphs,dates = MakeGraphs(filename)
 
     sdate = dates[-1].split('/')

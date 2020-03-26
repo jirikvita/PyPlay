@@ -33,8 +33,8 @@ CountriesCols = { 'China'   : [ ROOT.kRed,       24],
                   #'Slovakia'      : [ ROOT.kAzure+4,   23],
                   'USA'           :  [ ROOT.kAzure+4,   23],
                   'Singapore'      : [ ROOT.kMagenta+3,   23],
-                  'Japan'         : [ ROOT.kMagenta,   20],
-                  'Korea South'   : [ ROOT.kSpring,    21],
+                  'Japan'         : [ ROOT.kMagenta,   24],
+                  'Korea South'   : [ ROOT.kSpring+2,    25],
                   'UK'            : [ ROOT.kBlue+2,    22],
                   'Iran'          : [ ROOT.kBlue-2,    23],
                   'Thailand'      : [ ROOT.kRed+2,     29],
@@ -44,9 +44,10 @@ CountriesCols = { 'China'   : [ ROOT.kRed,       24],
 
 lsts = range(1, 30)
 tags = ['Global', 'China', 'non-China', 'Korea South', 'Japan', 'Italy', 'Germany', 'Czechia', 'Austria', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
-toFitIndices = range(3,10)
-#toFitIndices = [5, 6, 7,]
+#toFitIndices = range(3,10)
+##toFitIndices = [5, 6, 7,]
 #toFitIndices = [7,]
+toFitIndices = range(3,len(tags)-1)
 # not to add to the non-China sum twice:
 skipIndices = range(3,13)
 # for prediction:
@@ -126,6 +127,7 @@ leg = ROOT.TLegend(0.12, 0.52, 0.34, 0.88)
 leg.SetHeader(sdate)
 for gr_case,gr_death,tag in zip(gr_cases, gr_deaths,tags):
     can_cases.cd()
+    gr_case.SetName('cases_{}'.format(tag))
     gr_case.Draw(opt)
     can_deaths.cd()
     gr_death.Draw(opt)
@@ -155,11 +157,12 @@ gr_deaths[0].GetYaxis().SetRangeUser(1., gr_deaths[0].GetYaxis().GetXmax()*10000
 dgr_cases = []
 dgr_deaths = []
 fit_cases = []
+fit_cases2 = []
 
 ig = -1
 
 
-canCountries = ROOT.TCanvas('can', 'can', 200, 200, 1000, 800)
+canCountries = ROOT.TCanvas('CanCountries', 'CanCountries', 200, 200, 1000, 800)
 canCountries.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
@@ -203,18 +206,35 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
         gr_case.Fit(fitname, '', '', x1, x2)
         for ep in evalPoints:
             print('Est. cases  in day {}: {:4.0f}'.format(ep, fit_case.Eval(1.*ep)))
+        # firt data fit:
+        fitname = gr_case.GetName() + '_fit2'
+        xx = ROOT.Double()
+        yy = ROOT.Double()
+        gr_case.GetPoint(0, xx, yy)
+        if 'Korea' in fitname or 'Iran' in fitname:
+            x1 = xx + 6
+        else:
+            xx += 10
+        fit_case2 = ROOT.TF1(fitname, '[0]*exp([1]*x)', xx, x1)
+        fit_case2.SetLineColor(gr_case.GetMarkerColor())
+        fit_case2.SetLineStyle(2)
+        fit_case2.SetParameters(1., 0.3)
+        fit_cases2.append(fit_case2)
+        gr_case.Fit(fitname, '', '', xx, x1)
+        
+
             
 canCountries.cd()
 ig = 0
 ifit = 0
-h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, -10, 65, 5000, 1., 5.e5)
+h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, 30, 65, 5000, 1., 1.e7)
 ###h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 1000, 0, 55, 500, 1., 5.e2)
 h2.SetStats(0)
 h2.SetTitle('')
 h2.Draw()
 opt = 'P'
 icol = -1
-legFit = ROOT.TLegend(0.12, 0.46, 0.40, 0.85)
+legFit = ROOT.TLegend(0.12, 0.60, 0.55, 0.88)
 legFit.SetHeader(sdate)
 legFit.SetBorderSize(0)
 for tag,gr_case in zip(tags,gr_cases):
@@ -224,17 +244,26 @@ for tag,gr_case in zip(tags,gr_cases):
         gr_case.Draw(opt)
         opt = 'P'
         fit_case = fit_cases[ifit]
+        fit_case2 = fit_cases2[ifit]
         fit_case.SetLineColor(gr_case.GetMarkerColor())
         fit_case.Draw('same')
+        fit_case2.Draw('same')
         chi2 = fit_case.GetChisquare()
         ndf = fit_case.GetNDF()
+        chi2early = fit_case2.GetChisquare()
+        ndfearly = fit_case2.GetNDF()
         #text = ROOT.TLatex(0.15, 0.84 - ifit*0.065, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + + ' a_{' + '{:}'.formart(kLastDaysToFit)  + '}={:1.2f}'.format(fit_case.GetParameter(1)) )
         #text.SetTextSize(0.04)
         #text.SetTextColor(gr_case.GetMarkerColor())
         #text.SetNDC()
         #text.Draw()
         #stuff.append(text)
-        legFit.AddEntry(gr_case, '{:8}'.format(tag) + ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1)), 'PL' )
+        legtext = '{:20}'.format(tag)
+        #legtext += ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2early/ndfearly) + ' a_{0}' + '={:1.2f}'.format(fit_case2.GetParameter(1))
+        #legtext += ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1))
+        legtext += ' a_{0}' + '={:1.2f}'.format(fit_case2.GetParameter(1))
+        legtext += ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1))
+        legFit.AddEntry(gr_case, legtext, 'PL' )
         stuff.append([fit_case, gr_case])
         ifit = ifit+1
     ig = ig+1
@@ -278,8 +307,10 @@ canGrowth.Print('Coronavirus_growth_liny.png')
 ####################################
 canCountries.cd()
 ROOT.gPad.Update()
+h2.GetYaxis().SetRangeUser(0., 8e4)
 canCountries.Print('CoronavirusCases_Countries_liny.png')
 ROOT.gPad.SetLogy()
+h2.GetYaxis().UnZoom()
 canCountries.Print('CoronavirusCases_Countries_logy.png')
 
 ####################################
@@ -339,9 +370,9 @@ gr_ratio_daily.SetMarkerColor(ROOT.kBlack)
 gr_ratio_daily.SetMarkerStyle(20)
 
 canRatio.cd(1)
-x1 = 10.
 x2 = len(cz_tests) + 5
-hh2 = ROOT.TH2D("tmp2", ";Days since 1.3.2020;#", 100, 0, x2, 5000, 1., 100000)
+x2 = -15
+hh2 = ROOT.TH2D("tmp2", ";Days since 1.3.2020;#", 100, 0, x2, 5000, 1., 500000)
 hh2.SetStats(0)
 hh2.Draw()
 gr_cz_tests.SetLineColor(ROOT.kBlue)
