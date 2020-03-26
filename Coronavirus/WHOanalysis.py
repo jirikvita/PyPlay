@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
 from __future__ import print_function
-import ROOT
+import ROOT, os, sys
 # jk 12.2.2020
 
 from math import sqrt, pow
 from Tools import *
 from Data import *
 
+cans = []
 stuff = []
 print(Data)
 
@@ -109,12 +110,14 @@ for data in Data:
 
 canname = 'CanCases'
 can_cases = ROOT.TCanvas(canname, canname, 0, 0, 1189,844)
+cans.append(can_cases)
 can_cases.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
 
 canname = 'CanDeaths'
 can_deaths = ROOT.TCanvas(canname, canname)
+cans.append(can_deaths)
 can_deaths.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
@@ -163,6 +166,7 @@ ig = -1
 
 
 canCountries = ROOT.TCanvas('CanCountries', 'CanCountries', 200, 200, 1000, 800)
+cans.append(canCountries)
 canCountries.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
@@ -271,6 +275,7 @@ legFit.Draw()
 stuff.append(legFit)
 canname = 'CanGrowth'
 canGrowth = ROOT.TCanvas(canname, canname, 500,500,500,500)
+cans.append(canGrowth)
 canGrowth.cd()
 ROOT.gPad.SetGridx()
 ROOT.gPad.SetGridy()
@@ -317,6 +322,7 @@ canCountries.Print('CoronavirusCases_Countries_logy.png')
 
 canname = 'CZ_SickOverTested'
 canRatio = ROOT.TCanvas(canname, canname, 0, 300, 1200, 600)
+cans.append(canRatio)
 canRatio.Divide(2,1)
 gr_ratio_cummulative = ROOT.TGraphErrors()
 gr_ratio_daily = ROOT.TGraphErrors()
@@ -371,7 +377,7 @@ gr_ratio_daily.SetMarkerStyle(20)
 
 canRatio.cd(1)
 x2 = len(cz_tests) + 5
-x2 = -15
+x1 = x2-15
 hh2 = ROOT.TH2D("tmp2", ";Days since 1.3.2020;#", 100, 0, x2, 5000, 1., 500000)
 hh2.SetStats(0)
 hh2.Draw()
@@ -424,5 +430,17 @@ ROOT.gPad.Update()
 canRatio.Print(canRatio.GetName() + '.png')
 
 stuff.append([can_cases, can_deaths, canCountries, gr_deaths, gr_cases, leg, legFit, canRatio, gr_ratio_cummulative, gr_ratio_daily, rleg])
+
+
+name='CoronavirusCases_Countries_liny'
+cmd='myput.py slo public_html/virus/covid-19 "{}.png"'.format(name)
+os.system(cmd)
+name='CoronavirusCases_Countries_logy'
+cmd='myput.py slo public_html/virus/covid-19 "{}.png"'.format(name)
+os.system(cmd)
+name='CZ_SickOverTested'
+cmd='myput.py slo public_html/virus/covid-19 "{}.png"'.format(name)
+os.system(cmd)
+
 
 ROOT.gApplication.Run()
