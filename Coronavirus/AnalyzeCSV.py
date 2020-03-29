@@ -175,7 +175,7 @@ def main(argv):
     if kShiftAxisToSameMinCases:
         Xmin = 0
         Xmax = len(dates)
-    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 9.e4)
+    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 50.e4)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.GetYaxis().SetMoreLogLabels()

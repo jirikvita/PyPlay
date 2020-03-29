@@ -231,7 +231,7 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
 canCountries.cd()
 ig = 0
 ifit = 0
-h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, 30, 65, 5000, 1., 1.e7)
+h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 100, 30, len(Data)+5, 5000, 1., 1.e7)
 ###h2 = ROOT.TH2D("tmp", "tmp;WHO report number;Cases", 1000, 0, 55, 500, 1., 5.e2)
 h2.SetStats(0)
 h2.SetTitle('')
@@ -410,7 +410,7 @@ ROOT.gPad.Update()
 
 canRatio.cd(2)
 
-hhh2 = ROOT.TH2D("tmp3", ";Days since 1.3.2020;CZ Positive/Tested", 100, 0, x2, 100, 0., 0.35)
+hhh2 = ROOT.TH2D("tmp3", ";Days since 1.3.2020;CZ Positive/Tested", 100, 0, x2, 100, 0., 0.20)
 hhh2.SetStats(0)
 hhh2.Draw()
 
