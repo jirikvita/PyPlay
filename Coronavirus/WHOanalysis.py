@@ -6,7 +6,7 @@ import ROOT, os, sys
 
 from math import sqrt, pow
 from Tools import *
-from Data import *
+from DataWHO import *
 
 cans = []
 stuff = []
@@ -48,9 +48,9 @@ tags = ['Global', 'China', 'non-China', 'Korea South', 'Japan', 'Italy', 'German
 #toFitIndices = range(3,10)
 ##toFitIndices = [5, 6, 7,]
 #toFitIndices = [7,]
-toFitIndices = range(3,len(tags)-1)
+toFitIndices = range(3,len(tags))
 # not to add to the non-China sum twice:
-skipIndices = range(3,13)
+skipIndices = range(3,len(tags))
 # for prediction:
 evalPoints = range(55, 69)
 
@@ -149,12 +149,12 @@ stuff.append(leg)
 
 can_cases.Print('CoronavirusCases_liny.png')
 ROOT.gPad.SetLogy()
-gr_cases[0].GetYaxis().SetMoreLogLabels()
+#gr_cases[0].GetYaxis().SetMoreLogLabels()
 gr_cases[0].GetYaxis().SetRangeUser(1., gr_cases[0].GetYaxis().GetXmax()*10000.)
 
 can_deaths.Print('CoronavirusDeaths_liny.png')
 ROOT.gPad.SetLogy()
-gr_deaths[0].GetYaxis().SetMoreLogLabels()
+#gr_deaths[0].GetYaxis().SetMoreLogLabels()
 gr_deaths[0].GetYaxis().SetRangeUser(1., gr_deaths[0].GetYaxis().GetXmax()*10000.)
 
 dgr_cases = []
@@ -206,7 +206,7 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
         fit_case.SetLineStyle(2)
         fit_case.SetParameters(1., 0.3)
         fit_cases.append(fit_case)
-        gr_case.GetYaxis().SetMoreLogLabels()
+        #gr_case.GetYaxis().SetMoreLogLabels()
         gr_case.Fit(fitname, '', '', x1, x2)
         for ep in evalPoints:
             print('Est. cases  in day {}: {:4.0f}'.format(ep, fit_case.Eval(1.*ep)))
@@ -417,7 +417,7 @@ hhh2.Draw()
 gr_ratio_cummulative.Draw('P')
 gr_ratio_cummulative.GetYaxis().SetTitle('CZ Positive/Tested')
 gr_ratio_cummulative.GetXaxis().SetTitle('Days since 1.3.2020')
-gr_ratio_cummulative.Fit('pol1')
+gr_ratio_cummulative.Fit('pol1', '', '', x2-20, x2)
 
 gr_ratio_daily.Draw('P')
 
