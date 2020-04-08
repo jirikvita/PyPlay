@@ -212,19 +212,20 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
             print('Est. cases  in day {}: {:4.0f}'.format(ep, fit_case.Eval(1.*ep)))
         # firt data fit:
         fitname = gr_case.GetName() + '_fit2'
-        xx = ROOT.Double()
-        yy = ROOT.Double()
-        gr_case.GetPoint(0, xx, yy)
-        if 'Korea' in fitname or 'Iran' in fitname:
-            x1 = xx + 6
-        else:
-            xx += 10
-        fit_case2 = ROOT.TF1(fitname, '[0]*exp([1]*x)', xx, x1)
+        #xx = ROOT.Double()
+        #yy = ROOT.Double()
+        #gr_case.GetPoint(0, xx, yy)
+        #if 'Korea' in fitname or 'Iran' in fitname:
+        #    x1 = xx + 6
+        #else:
+        #    xx += 10
+        x3 = xx - 2*kLastDaysToFit + 0.5
+        fit_case2 = ROOT.TF1(fitname, '[0]*exp([1]*x)', x3, x1)
         fit_case2.SetLineColor(gr_case.GetMarkerColor())
         fit_case2.SetLineStyle(2)
         fit_case2.SetParameters(1., 0.3)
         fit_cases2.append(fit_case2)
-        gr_case.Fit(fitname, '', '', xx, x1)
+        gr_case.Fit(fitname, '', '', x3, x1)
         
 
             
@@ -265,7 +266,7 @@ for tag,gr_case in zip(tags,gr_cases):
         legtext = '{:20}'.format(tag)
         #legtext += ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2early/ndfearly) + ' a_{0}' + '={:1.2f}'.format(fit_case2.GetParameter(1))
         #legtext += ' #chi^{2}/ndf' + '={:1.1f}'.format(chi2/ndf) + ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1))
-        legtext += ' a_{0}' + '={:1.2f}'.format(fit_case2.GetParameter(1))
+        legtext += ' a_{' + '{}-{}'.format(kLastDaysToFit*2, kLastDaysToFit) + '}' + '={:1.2f}'.format(fit_case2.GetParameter(1))
         legtext += ' a_{' + '{:}'.format(kLastDaysToFit)  + '}' + '={:1.2f}'.format(fit_case.GetParameter(1))
         legFit.AddEntry(gr_case, legtext, 'PL' )
         stuff.append([fit_case, gr_case])
