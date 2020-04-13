@@ -204,7 +204,7 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
         fit_case = ROOT.TF1(fitname, '[0]*exp([1]*x)', x1, x2)
         fit_case.SetLineColor(gr_case.GetMarkerColor())
         fit_case.SetLineStyle(2)
-        fit_case.SetParameters(1., 0.3)
+        fit_case.SetParameters(1.4, 0.06)
         fit_cases.append(fit_case)
         #gr_case.GetYaxis().SetMoreLogLabels()
         gr_case.Fit(fitname, '', '', x1, x2)

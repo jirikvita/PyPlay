@@ -192,6 +192,7 @@ def main(argv):
                       'Czechia'       : [ ROOT.kOrange+10, 33],
                       'Austria'       : [ ROOT.kTeal+3,      20],
                       #'Hungary'       : [ ROOT.kPink,      22],
+                      'Sweden'       : [ ROOT.kPink,      22],
                       'Slovakia'      : [ ROOT.kAzure+4,   23],
                       'Singapore'      : [ ROOT.kMagenta+3,   23],
                       'Japan'         : [ ROOT.kMagenta,   20],
