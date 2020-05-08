@@ -11,6 +11,8 @@ import ROOT
 from math import sqrt, pow, log, exp
 import os, sys, getopt
 
+from Tools import CopyStyle
+
 cans = []
 stuff = []
 
@@ -139,10 +141,22 @@ def main(argv):
     canname = 'ConfirmedCasesLiny'
     canlin = ROOT.TCanvas(canname, canname, 0, 0, 1400, 800)
     cans.append(canlin)
+    canname = 'ConfirmedCasesLiny2'
+    canlin2 = ROOT.TCanvas(canname, canname, 0, 0, 1400, 800)
+    cans.append(canlin2)
 
+    # cases:
     filename = 'time_series_covid19_confirmed_global.csv' # OLD: 'time_series_19-covid-Confirmed.csv'
     graphs,dates = MakeGraphs(filename)
 
+    # deaths:
+    dfilename = 'time_series_covid19_deaths_global.csv'
+    dgraphs,ddates = MakeGraphs(dfilename)
+
+    # recovered:
+    rfilename = 'time_series_covid19_recovered_global.csv'
+    rgraphs,rdates = MakeGraphs(rfilename)
+    
     sdate = dates[-1].split('/')
     dd = sdate[1]
     mm = sdate[0]
@@ -160,10 +174,12 @@ def main(argv):
     nx = 6
     ny = 3
     canlin.Divide(nx,ny)
-    for i in range(nx*ny):
-        canlin.cd(i+1)
-        ROOT.gPad.SetGridy(1)
-        ROOT.gPad.SetGridx(1)
+    canlin2.Divide(nx,ny)
+    for cnl in canlin,canlin2:
+        for i in range(nx*ny):
+            cnl.cd(i+1)
+            ROOT.gPad.SetGridy(1)
+            ROOT.gPad.SetGridx(1)
 
     can.cd()
     ROOT.gPad.SetLogy(1)
@@ -175,7 +191,7 @@ def main(argv):
     if kShiftAxisToSameMinCases:
         Xmin = 0
         Xmax = len(dates)
-    h2 = ROOT.TH2D("tmp", "tmp;days;       Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 50.e4)
+    h2 = ROOT.TH2D("tmp", "tmp;days; Cummulative Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 5.e7)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.GetYaxis().SetMoreLogLabels()
@@ -187,11 +203,11 @@ def main(argv):
                       'Germany'       : [ ROOT.kBlue,      22],
                       'France'        : [ ROOT.kGreen+2,   23],
                       'Spain'         : [ ROOT.kViolet,    20],
-                      #'Belgium'       : [ ROOT.kViolet+2,  33],
-                      #'Sweden'        : [ ROOT.kViolet+4,   34],
+                      'Belgium'       : [ ROOT.kViolet+2,  33],
+                      'Australia'     : [ ROOT.kViolet+4,   34],
                       'Czechia'       : [ ROOT.kOrange+10, 33],
                       'Austria'       : [ ROOT.kTeal+3,      20],
-                      #'Hungary'       : [ ROOT.kPink,      22],
+                      'Hungary'       : [ ROOT.kPink,      22],
                       'Sweden'       : [ ROOT.kPink,      22],
                       'Slovakia'      : [ ROOT.kAzure+4,   23],
                       'Singapore'      : [ ROOT.kMagenta+3,   23],
@@ -201,8 +217,30 @@ def main(argv):
                       'Iran'          : [ ROOT.kBlue-2,    23],
                       'Thailand'      : [ ROOT.kRed+2,     29],
                       'Taiwan*'      : [ ROOT.kPink+2,     24],
-                      'Switzerland' : [ ROOT.kYellow+2 , 33], # 'Washington US'
-                      'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
+                      'Switzerland' : [ ROOT.kYellow+2 , 33], 
+                      #'Canada, BC' : [ ROOT.kYellow+2 , 33],
+                      'US' : [ ROOT.kRed+2 , 20],
+                      'Brazil' : [ ROOT.kBlue+1 , 23],
+                      'Russia' : [ ROOT.kRed , 22],
+                      'Israel' : [ ROOT.kBlue-1 , 21],
+                      'Portugal' : [ ROOT.kGreen , 21],
+                      'Poland' : [ ROOT.kRed+4 , 24],
+                      'Denmark' : [ ROOT.kGray+2 , 25],
+                      'Netherlands' : [ ROOT.kTeal , 26],
+                      'Philippines' : [ ROOT.kMagenta+2 , 24],
+                      'Malaysia' : [ ROOT.kSpring+2 , 23],
+                      'New Zeland' : [ ROOT.kSpring+1 , 23],
+                      'Turkey' : [ ROOT.kRed-2 , 23],
+                      'India' : [ ROOT.kGreen+1 , 25],
+                       #'Peru' : [ ROOT.kBlue , 27],
+                      'Ecuador' : [ ROOT.kRed , 28],
+                      'Mexico' : [ ROOT.kGray , 24],
+                      'Chile' : [ ROOT.kMagenta-2 , 23],
+                      #'South Africa' : [ ROOT.kRed+5 , 23],
+                      'Algeria' : [ ROOT.kSpring , 28],
+                      'Argentina' : [ ROOT.kAzure , 20],
+                      
+                      
     }
     CountriesToPlot = []
     for country in CountriesCols:
@@ -234,14 +272,22 @@ def main(argv):
         if country not in CountriesToPlot:
             continue
         graph = graphs[country]
+        dgraph = dgraphs[country]
+        #rcountry = country + ''
+        #if 'Canada' in country: rcountry = 'Canada'
+        rgraph = rgraphs[country]
         ig = ig + 1
         can.cd()
         graph.SetMarkerColor(CountriesCols[country][0])
         graph.SetLineColor(CountriesCols[country][0])
         graph.SetMarkerStyle(CountriesCols[country][1])
         graph.SetMarkerSize(1)
-
-
+        CopyStyle(graph,dgraph)
+        dgraph.SetLineWidth(3)
+        CopyStyle(graph,rgraph)
+        rgraph.SetLineWidth(3)
+        rgraph.SetLineStyle(2)
+        
         xmax = Xmax
         xmin = - kLastDaysToFit + 0.5
         if kShiftAxisToSameMinCases:
@@ -298,18 +344,41 @@ def main(argv):
         if drawHistoricFit:
             fits_history[country].Draw('same')
             
-        canlin.cd(ipad)
+        if ipad <= nx*ny:
+            canlin.cd(ipad)
+        else:
+            canlin2.cd(ipad % (nx*ny) + 1)
         graph.Draw('AP')
+        dgraph.Draw('L')
+        rgraph.Draw('L')
         graph.GetYaxis().SetRangeUser(0., graph.GetYaxis().GetXmax())
-        ctxt = ROOT.TLatex(0.14, 0.82, '{}'.format(country))
+        ctxt = ROOT.TLatex(0.14, 0.835, '{}'.format(country))
         ctxt.SetNDC()
         ctxt.Draw()
-        ctxt.SetTextSize(0.08)
+        ctxt.SetTextSize(0.07)
         stuff.append(ctxt)
-        ctxt2 = ROOT.TLatex(0.14, 0.74, '{}'.format(ltagshort))
+        ctxt2 = ROOT.TLatex(0.55, 0.835, '{}'.format(ltagshort))
         ctxt2.SetNDC()
         ctxt2.Draw()
-        ctxt2.SetTextSize(0.08)
+        ctxt2.SetTextSize(0.07)
+
+        ctxt3 = ROOT.TLatex(0.56, 0.77, 'a_{' + '{:}'.format(kLastDaysToFitShort) + '}' + '={:1.2f}'.format(fitsashort[country]))
+        ctxt3.SetNDC()
+        ctxt3.Draw()
+        ctxt3.SetTextSize(0.07)
+        if fitsashort[country] > 0.03:
+            ctxt3.SetTextColor(ROOT.kRed)
+        stuff.append(ctxt3)
+        
+        
+        linleg = ROOT.TLegend(0.12, 0.50, 0.50, 0.80)
+        linleg.SetHeader('Cummulative')
+        linleg.AddEntry(graph, 'Cases', 'P')
+        linleg.AddEntry(rgraph, 'Recovered', 'L')
+        linleg.AddEntry(dgraph, 'Deaths', 'L')
+        linleg.SetBorderSize(0)
+        linleg.Draw()
+        stuff.append(linleg)
         stuff.append(ctxt2)
         ipad += 1
     
@@ -320,6 +389,8 @@ def main(argv):
     
     canlin.Update()
     canlin.Print(canlin.GetName() + '_{}.png'.format(tag))
+    canlin2.Update()
+    canlin2.Print(canlin2.GetName() + '_{}.png'.format(tag))
     
     ROOT.gPad.Update()
     can.Print(can.GetName() + '_{}.png'.format(tag))
