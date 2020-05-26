@@ -11,12 +11,13 @@ import ROOT
 from math import sqrt, pow, log, exp
 import os, sys, getopt
 
-from Tools import CopyStyle
+from Tools import CopyStyle, MakeDiffGr
+
 
 cans = []
 stuff = []
 
-kMinCasesToPlot = 10
+kMinCasesToPlot = 0
 kLastDaysToFit = 7
 kLastDaysToFitShort = 4
 kHistoryDay0 = 30
@@ -78,7 +79,9 @@ def MakeGraphs(fname):
                 sval = sval[:-1]
             val = int(sval)
             if val > kMinCasesToPlot:
-                err = sqrt(val)
+                err = 0.
+                if err > 0:
+                    sqrt(val)
                 if kShiftAxisToSameMinCases:
                     graph.SetPoint(ip, ip, val)
                     graph.SetPointError(ip, 0, err)
@@ -91,6 +94,23 @@ def MakeGraphs(fname):
     return graphs,dates
 
 ##########################################
+def MakeActualCasesGraphs(CountriesToPlot, cgraphs, dgraphs, rgraphs):
+    # sgraphs: a list of graphs to be subtracted
+    agraphs = {}
+    for country in cgraphs:
+        if country not in CountriesToPlot:
+            continue
+        cgraph = cgraphs[country] # cases
+        dgraph = dgraphs[country] # deaths
+        rgraph = rgraphs[country] # recovered
+        tmpgraph = MakeDiffGr(cgraph, dgraph)
+        agraph = MakeDiffGr(tmpgraph, rgraph)
+        agraph.SetName(cgraph.GetName() + '_actual')
+        agraphs[country] = agraph
+    return agraphs
+
+##########################################
+
 # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
 def main(argv):
     #if len(sys.argv) > 1:
@@ -156,7 +176,7 @@ def main(argv):
     # recovered:
     rfilename = 'time_series_covid19_recovered_global.csv'
     rgraphs,rdates = MakeGraphs(rfilename)
-    
+
     sdate = dates[-1].split('/')
     dd = sdate[1]
     mm = sdate[0]
@@ -191,7 +211,7 @@ def main(argv):
     if kShiftAxisToSameMinCases:
         Xmin = 0
         Xmax = len(dates)
-    h2 = ROOT.TH2D("tmp", "tmp;days; Cummulative Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2., 5.e7)
+    h2 = ROOT.TH2D("tmp", "tmp;days; Cummulative Cases", 1000, Xmin, Xmax, 1000, kMinCasesToPlot/2. + 10., 5.e7)
     h2.SetStats(0)
     h2.SetTitle('')
     h2.GetYaxis().SetMoreLogLabels()
@@ -223,7 +243,7 @@ def main(argv):
                       'Brazil' : [ ROOT.kBlue+1 , 23],
                       'Russia' : [ ROOT.kRed , 22],
                       'Israel' : [ ROOT.kBlue-1 , 21],
-                      'Portugal' : [ ROOT.kGreen , 21],
+                      'Portugal' : [ ROOT.kGreen , 25],
                       'Poland' : [ ROOT.kRed+4 , 24],
                       'Denmark' : [ ROOT.kGray+2 , 25],
                       'Netherlands' : [ ROOT.kTeal , 26],
@@ -246,6 +266,9 @@ def main(argv):
     for country in CountriesCols:
         CountriesToPlot.append(country)
 
+    # actual cases
+    agraphs = MakeActualCasesGraphs(CountriesToPlot, graphs, dgraphs, rgraphs)
+    
     x1, y1, x2, y2 = 0.115, 0.12, 0.34, 0.88
     if kShiftAxisToSameMinCases:
         x1, y1, x2, y2 = 0.65, 0.12, 0.87, 0.88
@@ -273,6 +296,7 @@ def main(argv):
             continue
         graph = graphs[country]
         dgraph = dgraphs[country]
+        agraph = agraphs[country]
         #rcountry = country + ''
         #if 'Canada' in country: rcountry = 'Canada'
         rgraph = rgraphs[country]
@@ -283,10 +307,15 @@ def main(argv):
         graph.SetMarkerStyle(CountriesCols[country][1])
         graph.SetMarkerSize(1)
         CopyStyle(graph,dgraph)
-        dgraph.SetLineWidth(3)
+        dgraph.SetLineWidth(2)
+        dgraph.SetLineStyle(3)
         CopyStyle(graph,rgraph)
-        rgraph.SetLineWidth(3)
+        rgraph.SetLineWidth(2)
         rgraph.SetLineStyle(2)
+        CopyStyle(graph,agraph)
+        agraph.SetMarkerSize(0)
+        agraph.SetLineWidth(3)
+        agraph.SetLineStyle(1)
         
         xmax = Xmax
         xmin = - kLastDaysToFit + 0.5
@@ -337,7 +366,7 @@ def main(argv):
         fits2[country] = fit2
         graph.Fit(fit2, "", "", xx1, xx2) #xmin - off, xmax - off)
         fitsashort[country] = fit2.GetParameter(1)
-        leg.AddEntry(graph, '{:15}'.format(country) + ' a_{' + '{:}'.format(kLastDaysToFit) + '}=' + '{:1.2f}'.format(fitsa[country]) + ' a_{' + '{}'.format(kLastDaysToFitShort) + '}' + '={:1.2f}'.format(fitsashort[country]), 'PL')
+        leg.AddEntry(graph, '{:15}'.format(country) + ' a_{' + '{:}'.format(kLastDaysToFit) + '}=' + '{:1.3f}'.format(fitsa[country]) + ' a_{' + '{}'.format(kLastDaysToFitShort) + '}' + '={:1.3f}'.format(fitsashort[country]), 'PL')
         graph.Draw(opt)
         fit.Draw('same')
         fit2.Draw('same')
@@ -348,9 +377,12 @@ def main(argv):
             canlin.cd(ipad)
         else:
             canlin2.cd(ipad % (nx*ny) + 1)
+
         graph.Draw('AP')
         dgraph.Draw('L')
         rgraph.Draw('L')
+        agraph.Draw('C')
+        
         graph.GetYaxis().SetRangeUser(0., graph.GetYaxis().GetXmax())
         ctxt = ROOT.TLatex(0.14, 0.835, '{}'.format(country))
         ctxt.SetNDC()
@@ -362,7 +394,7 @@ def main(argv):
         ctxt2.Draw()
         ctxt2.SetTextSize(0.07)
 
-        ctxt3 = ROOT.TLatex(0.56, 0.77, 'a_{' + '{:}'.format(kLastDaysToFitShort) + '}' + '={:1.2f}'.format(fitsashort[country]))
+        ctxt3 = ROOT.TLatex(0.56, 0.77, 'a_{' + '{:}'.format(kLastDaysToFitShort) + '}' + '={:1.3f}'.format(fitsashort[country]))
         ctxt3.SetNDC()
         ctxt3.Draw()
         ctxt3.SetTextSize(0.07)
@@ -373,7 +405,8 @@ def main(argv):
         
         linleg = ROOT.TLegend(0.12, 0.50, 0.50, 0.80)
         linleg.SetHeader('Cummulative')
-        linleg.AddEntry(graph, 'Cases', 'P')
+        linleg.AddEntry(graph, 'Cumm. cases', 'P')
+        linleg.AddEntry(agraph, 'Actual cases', 'L')
         linleg.AddEntry(rgraph, 'Recovered', 'L')
         linleg.AddEntry(dgraph, 'Deaths', 'L')
         linleg.SetBorderSize(0)

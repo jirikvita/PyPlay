@@ -2,7 +2,7 @@
 # jiri kvita 2020
 
 import ROOT
-from math import log10
+from math import log10, sqrt, pow, fabs
 
 # distance scaling:
 gkm = 1.
@@ -49,6 +49,38 @@ def CountPeople(families):
         n = n + len(fam.GetMembers())
     return n
 
+#########################################
+def MakeDiffGr(gr1, gr2):
+    dgr = ROOT.TGraphErrors()
+    x1 = ROOT.Double()
+    y1 = ROOT.Double()
+    x2 = ROOT.Double()
+    y2 = ROOT.Double()
+    i1 = 0
+    i2 = 0
+    ip = 0
+    n1,n2 =  gr1.GetN(),gr2.GetN()
+    for i in range(0, max(n1,n2) - 1):
+        if i1 >= n1 or i2 >= n2:
+            break
+        gr1.GetPoint(i1, x1, y1)
+        gr2.GetPoint(i2, x2, y2)
+        if fabs(x1 - x2) > 1e-3:
+            print('WARNING in MakeDiffGr: too different x values {}, {}. Shifting indices {} {}'.format(x1, x2, i1, i2))
+            if x1 < x2:
+                i1 += 1
+            else:
+                i2 += 1
+            continue
+        diff = y1-y2
+        err = sqrt(fabs(diff))
+        dgr.SetPoint(ip, x1, diff)
+        dgr.SetPointError(ip, 0, err)
+        ip = ip + 1
+        i1 += 1
+        i2 += 1
+
+    return dgr
 #########################################
 def MakeDerivative(gr):
     dgr = ROOT.TGraph()
