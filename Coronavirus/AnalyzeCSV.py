@@ -37,7 +37,7 @@ def GetChi2Str(chi2,ndf):
         return 'ndf=0!'
 
 ##########################################
-def MakeGraphs(fname):
+def MakeGraphs(fname, addtag = ''):
     csvfile = open(fname, 'r')
     graphs = {}
     iline = -1
@@ -51,13 +51,19 @@ def MakeGraphs(fname):
             dates = items[4:]
             continue
         graph = ROOT.TGraphErrors()
+        #if items[0] == '':
+        #    items = items[1:]
+        if items[1] == '"Korea':
+            items[2] = (items[1] + items[2]).replace('"','')
+            items.pop(1)
+        #items.pop(0)
         vals = items[4:]
         province,state = items[0], items[1]
 
         # skip provinces for the moment
         if province not in kAcceptProvinces:
             continue
-        print(items)
+        print('ITEMS: ', items)
         gname = '{}{}'.format(province,state)
         if province != '':
             gname = '{} {}'.format(province,state)
@@ -67,9 +73,10 @@ def MakeGraphs(fname):
             gname = 'Hong Kong'
         if gname == 'British Columbia Canada':
             gname = 'Canada, BC'
-        if gname == 'United Kingdom United Kingdom':
+        if gname == 'United Kingdom':
             gname = 'UK'
-        graph.SetName(gname)
+        print('Names+Tag: {} {}'.format(gname,addtag))
+        graph.SetName(gname + addtag)
         ip = 0
         id = -len(dates)
         for date,sval in zip(dates,vals):
@@ -102,9 +109,17 @@ def MakeActualCasesGraphs(CountriesToPlot, cgraphs, dgraphs, rgraphs):
             continue
         cgraph = cgraphs[country] # cases
         dgraph = dgraphs[country] # deaths
-        rgraph = rgraphs[country] # recovered
+
         tmpgraph = MakeDiffGr(cgraph, dgraph)
-        agraph = MakeDiffGr(tmpgraph, rgraph)
+
+        tgraph = ROOT.TGraph()
+        agraph = ROOT.TGraph()
+        try:
+            rgraph = rgraphs[country] # recovered
+            agraph = MakeDiffGr(tmpgraph, rgraph)
+        except:
+            rgraphs[country] = ROOT.TGraph()
+            agraphs[country] = ROOT.TGraph()
         agraph.SetName(cgraph.GetName() + '_actual')
         agraphs[country] = agraph
     return agraphs
@@ -167,15 +182,15 @@ def main(argv):
 
     # cases:
     filename = 'time_series_covid19_confirmed_global.csv' # OLD: 'time_series_19-covid-Confirmed.csv'
-    graphs,dates = MakeGraphs(filename)
+    graphs,dates = MakeGraphs(filename,'cases')
 
     # deaths:
     dfilename = 'time_series_covid19_deaths_global.csv'
-    dgraphs,ddates = MakeGraphs(dfilename)
+    dgraphs,ddates = MakeGraphs(dfilename,'deaths')
 
     # recovered:
     rfilename = 'time_series_covid19_recovered_global.csv'
-    rgraphs,rdates = MakeGraphs(rfilename)
+    rgraphs,rdates = MakeGraphs(rfilename,'recovered')
 
     sdate = dates[-1].split('/')
     dd = sdate[1]
@@ -193,13 +208,16 @@ def main(argv):
 
     nx = 6
     ny = 3
-    canlin.Divide(nx,ny)
-    canlin2.Divide(nx,ny)
-    for cnl in canlin,canlin2:
-        for i in range(nx*ny):
-            cnl.cd(i+1)
-            ROOT.gPad.SetGridy(1)
-            ROOT.gPad.SetGridx(1)
+    #drawSingle = 'Czech'
+    drawSingle = ''
+    if drawSingle == '':
+        canlin.Divide(nx,ny)
+        canlin2.Divide(nx,ny)
+        for cnl in canlin,canlin2:
+            for i in range(nx*ny):
+                cnl.cd(i+1)
+                ROOT.gPad.SetGridy(1)
+                ROOT.gPad.SetGridx(1)
 
     can.cd()
     ROOT.gPad.SetLogy(1)
@@ -235,7 +253,7 @@ def main(argv):
                       'Korea South'   : [ ROOT.kSpring,    21],
                       'UK'            : [ ROOT.kBlue+2,    22],
                       'Iran'          : [ ROOT.kBlue-2,    23],
-                      'Thailand'      : [ ROOT.kRed+2,     29],
+                      ###'Thailand'      : [ ROOT.kRed+2,     29],
                       'Taiwan*'      : [ ROOT.kPink+2,     24],
                       'Switzerland' : [ ROOT.kYellow+2 , 33], 
                       #'Canada, BC' : [ ROOT.kYellow+2 , 33],
@@ -247,7 +265,7 @@ def main(argv):
                       'Poland' : [ ROOT.kRed+4 , 24],
                       'Denmark' : [ ROOT.kGray+2 , 25],
                       'Netherlands' : [ ROOT.kTeal , 26],
-                      'Philippines' : [ ROOT.kMagenta+2 , 24],
+                       'Philippines' : [ ROOT.kMagenta+2 , 24],
                       'Malaysia' : [ ROOT.kSpring+2 , 23],
                       'New Zeland' : [ ROOT.kSpring+1 , 23],
                       'Turkey' : [ ROOT.kRed-2 , 23],
@@ -264,7 +282,8 @@ def main(argv):
     }
     CountriesToPlot = []
     for country in CountriesCols:
-        CountriesToPlot.append(country)
+        if drawSingle == '' or (drawSingle != '' and drawSingle in country):
+            CountriesToPlot.append(country)
 
     # actual cases
     agraphs = MakeActualCasesGraphs(CountriesToPlot, graphs, dgraphs, rgraphs)
@@ -398,13 +417,13 @@ def main(argv):
         ctxt3.SetNDC()
         ctxt3.Draw()
         ctxt3.SetTextSize(0.07)
-        if fitsashort[country] > 0.03:
+        if fitsashort[country] >= 0.01:
             ctxt3.SetTextColor(ROOT.kRed)
         stuff.append(ctxt3)
         
         
-        linleg = ROOT.TLegend(0.12, 0.50, 0.50, 0.80)
-        linleg.SetHeader('Cummulative')
+        linleg = ROOT.TLegend(0.12, 0.50, 0.45, 0.80)
+        #linleg.SetHeader('Cummulative')
         linleg.AddEntry(graph, 'Cumm. cases', 'P')
         linleg.AddEntry(agraph, 'Actual cases', 'L')
         linleg.AddEntry(rgraph, 'Recovered', 'L')
@@ -430,10 +449,12 @@ def main(argv):
     h2.GetXaxis().SetRangeUser(-40, h2.GetXaxis().GetXmax())
     ROOT.gPad.Update()
     can.Print(can.GetName() + '_{}_zoom.png'.format(tag))
+    print('Copying to remote server...')
     cmd='myput.py slo public_html/virus/covid-19 "{}*_{}*.png"'.format(can.GetName(),tag)
     os.system(cmd)
-
-    
+    print('Creating remote links to latest plots...')
+    cmd = "ssh -Y kvita@slo.upol.cz 'bash -ci ./vln.sh'"
+    os.system(cmd)
     ROOT.gApplication.Run()
     return
 
