@@ -73,5 +73,6 @@
    c1a->ToggleToolBar();
 
    c1a->Print("c1.png");
-   
+   c1a->Print("c1.pdf");
+
 }

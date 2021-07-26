@@ -1,3 +1,15 @@
+#include "TCanvas.h"
+#include "TCurlyLine.h"
+#include "TLine.h"
+#include "TMathText.h"
+#include "TColor.h"
+#include "TLatex.h"
+#include "TMarker.h"
+//#include "T.h"
+
+
+void c2()
+
 {
 //=========Macro generated from canvas: c2/c2
 //=========  (Tue Feb 17 11:58:46 2015) by ROOT version5.34/14
@@ -88,16 +100,22 @@
    marker->SetMarkerSize(3);
    marker->Draw();
 
-   tex = new TLatex(0.662116,0.9334258,"\\ell");
+   //TMathText tm;
+   //tm.DrawMathText(0.662116,0.9334258,"l");
+   tex = new TLatex(0.662116,0.9334258,"l");
+   //tex = new TText(0.662116,0.9334258,"\ell");
    tex->SetLineWidth(2);
    tex->Draw();
-      tex = new TLatex(0.8498294,0.6948682,"#nu");
+
+   tex = new TLatex(0.8498294,0.6948682,"#nu");
    tex->SetLineWidth(2);
    tex->Draw();
-      tex = new TLatex(0.2116041,0.07905687,"q'");
+
+   tex = new TLatex(0.2116041,0.07905687,"q'");
    tex->SetLineWidth(2);
    tex->Draw();
-      tex = new TLatex(0.1006826,0.1983356,"#bar{q}");
+
+   tex = new TLatex(0.1006826,0.1983356,"#bar{q}");
    tex->SetLineWidth(2);
    tex->Draw();
    c2->Modified();
@@ -106,5 +124,6 @@
    c2->ToggleToolBar();
 
    c2->Print("c2.png");
+   c2->Print("c2.pdf");
    
 }

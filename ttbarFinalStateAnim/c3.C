@@ -81,7 +81,7 @@
    line->SetLineWidth(3);
    line->Draw();
 
-   tex = new TLatex(0.7366412,0.8868176,"\\ell");
+   tex = new TLatex(0.7366412,0.8868176,"l");
    tex->SetLineWidth(2);
    tex->Draw();
       tex = new TLatex(0.8753181,0.6551265,"#nu");
@@ -118,4 +118,5 @@
    c3->ToggleToolBar();
 
    c3->Print("c3.png");
+   c3->Print("c3.pdf");
 }

@@ -80,7 +80,7 @@
    line->SetLineColor(ci);
    line->SetLineWidth(3);
    line->Draw();
-      tex = new TLatex(0.7366412,0.8868176,"\\ell");
+      tex = new TLatex(0.7366412,0.8868176,"l");
    tex->SetLineWidth(2);
    tex->Draw();
       tex = new TLatex(0.8753181,0.6551265,"#nu");
@@ -127,5 +127,6 @@
    c4->SetSelected(c4);
    c4->ToggleToolBar();
    c4->Print("c4.png");
+   c4->Print("c4.pdf");
    
 }

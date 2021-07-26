@@ -35,5 +35,6 @@
    c0->ToggleToolBar();
 
    c0->Print("c0.png");
+   c0->Print("c0.pdf");
    
 }
