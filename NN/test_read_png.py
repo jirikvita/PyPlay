@@ -4,6 +4,11 @@ from PIL import Image
 
 import numpy as np
 
+# reading NIST hand written character data
+# https://www.nist.gov/itl/products-and-services/emnist-dataset 
+# https://www.nist.gov/srd/nist-special-database-19
+
+
 
 # 128x128 pixels
 image = Image.open('data/by_class/6e/train_6e/train_6e_04507.png')
