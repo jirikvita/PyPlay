@@ -115,9 +115,12 @@ def main(argv):
         [0, 0],
         [0, 1],
         [1, 0],
-        [1, 1]
+        [1, 1],
+        #[-1,-1]
     ]
-    outputs = [1,0,0,1]
+    outputs = [1,0,0,1,
+               # 1
+    ]
 
     #Iterate through all inputs and find outputs:
     print('Iterating through inputs, finding outputs...')
