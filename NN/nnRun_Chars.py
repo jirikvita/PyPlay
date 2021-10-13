@@ -90,7 +90,7 @@ def main(argv):
     w3 = theano.shared(np.array([ random() for i in range(0,2) ]))
     b1 = theano.shared(1.)
     b2 = theano.shared(1.)
-    learning_rate = 0.001
+    learning_rate = 0.01
 
     print('w1 shape', w1.shape)
     
@@ -131,7 +131,7 @@ def main(argv):
         for img in imgs:
             #print('...appending input ', img)
             inputs.append(img)
-            outputs.append(int(hexcode, 16))
+            outputs.append(int(hexcode, 16) / 256.) # need to nprmalize this to be between 0 and 1;)
             print('Set to train over class {} with total of {} images!'.format(hexcode, len(inputs)))
 
     #print('Inputs: ', inputs)
@@ -142,7 +142,7 @@ def main(argv):
     #Iterate through all inputs and find outputs:
     print('Training: Iterating through inputs, finding outputs...{} times'.format(i2-i1))
     cost = []
-    nIters = 100 # 30000
+    nIters = 1000 # 30000
     for iteration in range(0, nIters):
         pred, cost_iter = train(inputs, outputs)
         print('iteration {}, cost: {}'.format(iteration, cost_iter))
