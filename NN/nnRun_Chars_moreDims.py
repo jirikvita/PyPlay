@@ -73,12 +73,7 @@ def main(argv):
     # read train data and convert them into linear numpy vectors
     # define the output categories as hex of the corresponding chars
     # train the NN on the train data
-
-
-    # for reading test data 
-    # indices range
-    i1, i2 = 100, 110
-    hexcodes = ['5a', '79']
+   
     
     # Step 1: Define variables
 
@@ -94,65 +89,46 @@ def main(argv):
     # number of output neurons same as number of classes?
     # or a smooth output with a range?
 
-    learning_rate = 0.01
-
-    # weights, constatns, and node outputs
     ws = []
     bs = []
-    aas = []
 
-    Ns = [5, 2, len(hexcodes) ]
-    n1 = Ns[0]
-    n2 = Ns[1]
+    n1 = 3
+    n2 = 2
 
     bs.append( theano.shared(1.) )
-    ilayer = 0
-    ws.append([])
     for i in range(0,n1):
-        ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,DIM) ])) )
+        ws.append( theano.shared(np.array([ random() for j in range(0,DIM) ])) )
 
+    # last node combines 2 into one
+    ws.append( theano.shared(np.array([ random() for j in range(0,n1) ])) )
+
+    learning_rate = 0.01
 
     # Step 2: Define mathematical expression
-    # actiavtion funtion 1/(1+exp())
-    aas.append([])
+    aas = []
     for i in range(0,n1):
-        aas[ilayer].append( 1/(1+T.exp(-T.dot(x,ws[ilayer][i])-bs[ilayer])) )
+        aas.append( 1/(1+T.exp(-T.dot(x,ws[i])-bs[0])) )
 
-
-    stacked_aas = []
+    # due to algebraic purposes:
+    # TO GENERALIZE!
+    x2 = T.stack(aas,axis=1)
     bs.append( theano.shared(1.) )
-    aas.append([])
-    ilayer = 1
-    ws.append([])
-    for i in range(0, Ns[-1]):
-        # due to algebraic purposes:
-        stacked_aas.append(T.stack(aas[0],axis=1))
-        # last node combines 2 into one
-        ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,n1) ])) )
-        aas[ilayer].append ( 1/(1+T.exp(-T.dot(stacked_aas[-1],ws[ilayer][-1])-bs[ilayer])) )
+    aas.append ( 1/(1+T.exp(-T.dot(x2,ws[-1])-bs[1])) )
 
     # Step 3: Define gradient and update rule
     print('Defining gradients...')
     a_hat = T.vector('a_hat') #Actual output
-    cost = T.log(1.)
-    for i in range(0, len(aas[-1])):
-        cost = cost + -(a_hat*T.log(aas[-1][i]) + (1.-a_hat)*T.log(1.-aas[-1][i])).sum()
+    cost = -(a_hat*T.log(aas[-1]) + (1-a_hat)*T.log(1-aas[-1])).sum()
 
     dws = []
-    
     for i in range(0, len(ws)):
-        dws.append([])
-        for j in range(0, len(ws[i])):
-            dws[-1].append( T.grad(cost, ws[i][j]) )
-
+        dws.append( T.grad(cost, ws[i]) ) 
     dbs = []
     for i in range(0, len(bs)):
-        dbs.append( T.grad(cost, bs[i]) )
-        
+        dbs.append( T.grad(cost, bs[i]) ) 
     locupdates = []
     for i in range(0, len(ws)):
-        for j in range(0, len(ws[i])):
-            locupdates.append( [ws[i][j], ws[i][j] - learning_rate*dws[i][j]] )
+        locupdates.append( [ws[i], ws[i] - learning_rate*dws[i]] )
     for i in range(0, len(bs)):
         locupdates.append( [bs[i], bs[i] - learning_rate*dbs[i]] )
     
@@ -163,7 +139,11 @@ def main(argv):
     )
 
 
-  
+    # read test data and measure the performace
+    # inputs
+    # indices range
+    i1, i2 = 100, 110
+    hexcodes = ['5a', '79']
     inputs = []
     outputs = []
     for hexcode in hexcodes:
@@ -171,10 +151,7 @@ def main(argv):
         for img in imgs:
             #print('...appending input ', img)
             inputs.append(img)
-            zeros = [0. for i in range(0, len(hexcodes)) ]
-            # need to normalize this to be between 0 and 1;)
-            zeros[zeros.index(hexcode)] = int(hexcode, 16) / 128.
-            outputs.append(zeros) 
+            outputs.append(int(hexcode, 16) / 128.) # need to nprmalize this to be between 0 and 1;)
             print('Set to train over class {} with total of {} images!'.format(hexcode, len(inputs)))
 
     #print('Inputs: ', inputs)
@@ -194,7 +171,7 @@ def main(argv):
     #Print the outputs:
     print('The outputs of the NN are:')
     for i in range(len(inputs)):
-        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
+        # print('The output for x1={} | x2={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
         
     #Plot the flow of cost:

@@ -1,0 +1,16 @@
+NN input data
+https://www.nist.gov/itl/products-and-services/emnist-dataset 
+https://www.nist.gov/srd/nist-special-database-19
+for ML hello world by 3B1B:
+https://www.youtube.com/watch?v=aircAruvnKk&ab_channel=3Blue1Brown
+NN using Theano: https://www.analyticsvidhya.com/blog/2016/04/neural-networks-python-theano/ 
+NN using Tensorflow and fashion images:
+https://www.tensorflow.org/tutorials/keras/classification
+Keras: https://www.journaldev.com/18314/keras-deep-learning-tutorial 
+Further links:
+https://www.python-course.eu/training_neural_networks.php
+https://www.youtube.com/watch?v=K6m-iOU3iqk&ab_channel=MachineLearningTV
+https://www.kdnuggets.com/2018/10/simple-neural-network-python.html
+https://towardsdatascience.com/how-to-build-your-own-neural-network-from-scratch-in-python-68998a08e4f6
+https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
+https://www.
