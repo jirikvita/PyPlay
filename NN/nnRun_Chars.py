@@ -76,8 +76,8 @@ def main(argv):
 
 
     # for reading test data 
-    # indices range
-    i1, i2 = 100, 110
+    # imgs ids i1..i2
+    i1, i2 = 70, 260
     hexcodes = ['5a', '79']
     
     # Step 1: Define variables
@@ -86,7 +86,10 @@ def main(argv):
     #x = theano.tensor.fvector('x')
     x = T.matrix('x')
 
-    DIM = 4096 # hack
+    baseDim = 128
+    fullDIM = baseDim*baseDim # hack
+    cutoffx,cutoffy = 40,40
+    DIM = (baseDim - 2*cutoffx)*(baseDim - 2*cutoffy) # hack
     print('Got image dimension {}'.format(DIM))
     # lin dim for linearized img matrix
 
@@ -96,12 +99,13 @@ def main(argv):
 
     learning_rate = 0.01
 
-    # weights, constatns, and node outputs
+    # weights, constants, and node outputs
     ws = []
     bs = []
     aas = []
 
-    Ns = [5, 2, len(hexcodes) ]
+    # Ns = [5, 2, len(hexcodes) ]
+    Ns = [24, 24, 1]
     n1 = Ns[0]
     n2 = Ns[1]
 
@@ -135,30 +139,47 @@ def main(argv):
     print('Defining gradients...')
     a_hat = T.vector('a_hat') #Actual output
     cost = T.log(1.)
-    for i in range(0, len(aas[-1])):
+    ng = len(aas[-1])
+    print(ng)
+    for i in range(0, ng):
+        if i % 10 == 0:
+            print('{}/{}'.format(i,ng))
         cost = cost + -(a_hat*T.log(aas[-1][i]) + (1.-a_hat)*T.log(1.-aas[-1][i])).sum()
 
     dws = []
-    
-    for i in range(0, len(ws)):
+
+    ng = len(ws)
+    print(ng)
+    for i in range(0, ng):
+        if i % 10 == 0:
+            print('{}/{}'.format(i,ng))
         dws.append([])
         for j in range(0, len(ws[i])):
             dws[-1].append( T.grad(cost, ws[i][j]) )
-
+    
     dbs = []
-    for i in range(0, len(bs)):
+    ng = len(bs)
+    print(ng)
+    for i in range(0, ng):
+        if i % 10 == 0:
+            print('{}/{}'.format(i,ng))
         dbs.append( T.grad(cost, bs[i]) )
         
     locupdates = []
-    for i in range(0, len(ws)):
+    ng = len(ws)
+    print(ng)
+    for i in range(0, ng):
+        if i % 10 == 0:
+            print('{}/{}'.format(i,ng))
         for j in range(0, len(ws[i])):
             locupdates.append( [ws[i][j], ws[i][j] - learning_rate*dws[i][j]] )
     for i in range(0, len(bs)):
         locupdates.append( [bs[i], bs[i] - learning_rate*dbs[i]] )
-    
+
+    print('Defining the function')
     train = function(
         inputs = [x,a_hat],
-        outputs = [aas[-1],cost],
+        outputs = [aas[-1][-1],cost],
         updates = locupdates
     )
 
@@ -166,29 +187,36 @@ def main(argv):
   
     inputs = []
     outputs = []
+
+    print('Reading images...')
     for hexcode in hexcodes:
-        imgs = readImages('data/by_class/', hexcode, i1, i2)
+        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy)
+        iimg = -1
         for img in imgs:
+            iimg = iimg+1
             #print('...appending input ', img)
             inputs.append(img)
-            zeros = [0. for i in range(0, len(hexcodes)) ]
             # need to normalize this to be between 0 and 1;)
-            zeros[zeros.index(hexcode)] = int(hexcode, 16) / 128.
-            outputs.append(zeros) 
+            outputs.append(int(hexcode, 16) / 128.)
             print('Set to train over class {} with total of {} images!'.format(hexcode, len(inputs)))
+            if iimg == 0:
+                PrintImg(img, baseDim, cutoffx, cutoffy)
 
     #print('Inputs: ', inputs)
     #print('Outputs: ', outputs)
     
     # Step 4: train the model:
-  
+
+    print('Training the model, linearized data dimension is {}'.format(DIM))
+    
     #Iterate through all inputs and find outputs:
     print('Training: Iterating through inputs, finding outputs...{} times'.format(i2-i1))
     cost = []
-    nIters = 1000 # 30000
+    nIters = 5000 # 30000
     for iteration in range(0, nIters):
         pred, cost_iter = train(inputs, outputs)
-        print('iteration {}, cost: {}'.format(iteration, cost_iter))
+        if iteration % 200 == 0:
+            print('iteration {}, cost: {}'.format(iteration, cost_iter))
         cost.append(cost_iter)
 
     #Print the outputs:

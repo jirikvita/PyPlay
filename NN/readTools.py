@@ -19,7 +19,7 @@ def MakeDigitStr(i, digits = 3):
         n = int(log10(i))
     except ValueError:
         pass
-    if i is 0:
+    if i == 0:
         n = 0
     for i in range(0, digits - n):
         tag = '0' + tag
@@ -27,9 +27,23 @@ def MakeDigitStr(i, digits = 3):
 
 
 ########################################################################################
+def PrintImg(img, ndim, cutoffx, cutoffy):
+    i = -1
+    j = -1
+    line = ''
+    for pix in img:
+        i = i+1
+        line = line + str(pix)
+        if i % (ndim - 2*cutoffx) == 0:
+            j = j+1
+            print(line)
+            line = ''
+    return
+
+########################################################################################
 # zoom using a symmetrical cutoff
 
-def readPng(path, hexcode, imgid, cutoff = 32):
+def readPng(path, hexcode, imgid, cutoffx, cutoffy):
 
     # example full name: 'data/by_class/6e/train_6e/train_6e_04507.png'
     
@@ -47,13 +61,13 @@ def readPng(path, hexcode, imgid, cutoff = 32):
     iline = -1
     for line in image_array:
         iline = iline + 1
-        if iline < cutoff or iline >= nLines - cutoff:
+        if iline < cutoffx or iline >= nLines - cutoffx:
             continue
         #print(line)
         icol = -1
         for x in line:
             icol = icol + 1
-            if icol < cutoff or icol >= nLines - cutoff:
+            if icol < cutoffy or icol >= nLines - cutoffy:
                 continue
             r,g,b = x[0], x[1], x[2]
             #print('r={} g={} b={}'.format(r,g,b))
@@ -68,12 +82,12 @@ def readPng(path, hexcode, imgid, cutoff = 32):
 
 ########################################################################################
 
-def readImages(path, hexcode, i1, i2):
+def readImages(path, hexcode, i1, i2, cutoffx, cutoffy):
     imgs = []
     for i in range(i1, i2):
         imgid = MakeDigitStr(i, 4)
         print('reading img {}'.format(imgid))
-        imgs.append (  readPng(path, hexcode, imgid) )
+        imgs.append (  readPng(path, hexcode, imgid, cutoffx, cutoffy) )
     return imgs
 
 ########################################################################################
