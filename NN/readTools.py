@@ -27,14 +27,30 @@ def MakeDigitStr(i, digits = 3):
 
 
 ########################################################################################
-def PrintImg(img, ndim, cutoffx, cutoffy):
+def PrintImg2DInv(img, thr = 0.25):
+    for xline in img:
+        line = ''
+        for rgb in xline:
+            sstr = '1'
+            r,g,b = rgb[0], rgb[1], rgb[2]
+            if 3. - (r+b+b) < thr:
+                sstr = '0'
+            line = line + sstr
+        print(line)
+    return
+
+########################################################################################
+def PrintImgFrom1D(img, ndimx):
     i = -1
     j = -1
     line = ''
     for pix in img:
         i = i+1
-        line = line + str(pix)
-        if i % (ndim - 2*cutoffx) == 0:
+        sstr = '0'
+        if pix > 0:
+            sstr = '1'
+        line = line + str(sstr)
+        if (i+1) % ndimx == 0:
             j = j+1
             print(line)
             line = ''
@@ -43,14 +59,18 @@ def PrintImg(img, ndim, cutoffx, cutoffy):
 ########################################################################################
 # zoom using a symmetrical cutoff
 
-def readPng(path, hexcode, imgid, cutoffx, cutoffy):
+def readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny, thr = 0.5):
 
     # example full name: 'data/by_class/6e/train_6e/train_6e_04507.png'
     
     # 128x128 pixels
     image = Image.open('{}/{}/train_{}/train_{}_{}.png'.format(path, hexcode, hexcode, hexcode, imgid))
-    image_array = np.array(image)
-
+    image_array_orig = np.array(image)
+    image_array = image_array_orig 
+    
+    if rebinx > 0 and rebiny > 0:
+        image_array = Rebin2DRGBArray(image_array_orig , rebinx, rebiny)
+    
     nLines = len(image_array)
     
     # bw and inverted image;-)
@@ -71,23 +91,51 @@ def readPng(path, hexcode, imgid, cutoffx, cutoffy):
                 continue
             r,g,b = x[0], x[1], x[2]
             #print('r={} g={} b={}'.format(r,g,b))
-            if r == 0 and g == 0 and b == 0:
+            if r <= thr and g <= thr and b <= thr:
                 #print('...found black dot {} column {}'.format(iline, icol))
                 #image_bw[iline*nLines + icol] = 1
-                image_bw.append(1)
+                image_bw.append(3. - r - g - b)
             else:
                 image_bw.append(0)
 
     return image_bw
 
 ########################################################################################
+def Rebin2DRGBArray(data, rebinx = 2, rebiny = 2, doAver = True):
+    newdata = []
+    # todo: check dimension on each line and divisibility by rebin factors?
+    for i in range(0, int(len(data)/rebinx)):
+        line = []
+        for j in range(0, int(len(data[0])/rebiny)):
+            # loop over rgb:
+            vals = []
+            ncols = len(data[0][0])
+            for icol in range(0,ncols):
+                val = 0.
+                n = 0
+                for ii in range(0,rebinx):
+                    for jj in range(0,rebiny):
+                        val = val + data[i*rebinx+ii][j*rebiny+jj][icol]
+                        n = n+1
+                if doAver:
+                    vals.append(val/(1.*n))
+                else:
+                    vals.append(val)
+            line.append(vals)
+        newdata.append(line)
+    return newdata
 
-def readImages(path, hexcode, i1, i2, cutoffx, cutoffy):
+
+########################################################################################
+
+
+def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1):
     imgs = []
     for i in range(i1, i2):
         imgid = MakeDigitStr(i, 4)
-        print('reading img {}'.format(imgid))
-        imgs.append (  readPng(path, hexcode, imgid, cutoffx, cutoffy) )
+        #print('reading img {}'.format(imgid))
+        img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny)
+        imgs.append ( img )
     return imgs
 
 ########################################################################################

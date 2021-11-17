@@ -78,7 +78,8 @@ def main(argv):
     # for reading test data 
     # imgs ids i1..i2
     i1, i2 = 70, 260
-    hexcodes = ['5a', '79']
+    #i1, i2 = 10, 10
+    hexcodes = ['30', '31']
     
     # Step 1: Define variables
 
@@ -86,10 +87,15 @@ def main(argv):
     #x = theano.tensor.fvector('x')
     x = T.matrix('x')
 
-    baseDim = 128
-    fullDIM = baseDim*baseDim # hack
-    cutoffx,cutoffy = 40,40
-    DIM = (baseDim - 2*cutoffx)*(baseDim - 2*cutoffy) # hack
+    # crop cutoff factor rebinned data:
+    # todo: seems it does not work for different x,y cutoffs?
+    cutoffx,cutoffy = 22, 22
+    rebinx = 2
+    rebiny = 2
+    baseDimx = int(128  / rebinx) - 2*cutoffx
+    baseDimy = int(128  / rebiny) - 2*cutoffy
+    fullDIM = baseDimx*baseDimy # hack
+    DIM = baseDimx*baseDimy # hack
     print('Got image dimension {}'.format(DIM))
     # lin dim for linearized img matrix
 
@@ -97,110 +103,141 @@ def main(argv):
     # number of output neurons same as number of classes?
     # or a smooth output with a range?
 
-    learning_rate = 0.01
+    learning_rate = 0.002 # 0.01
 
     # weights, constants, and node outputs
     ws = []
     bs = []
     aas = []
-
+    # list to store stacked neurons a's from each layer
+    stacked_aas = []
+    
     # Ns = [5, 2, len(hexcodes) ]
-    Ns = [24, 24, 1]
+    Ns = [26, 22, 1]
+    n0 = DIM
     n1 = Ns[0]
     n2 = Ns[1]
-
-    bs.append( theano.shared(1.) )
+    n3 = Ns[2]
+    
+    print('*** defining first NN layer ***')
     ilayer = 0
-    ws.append([])
-    for i in range(0,n1):
-        ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,DIM) ])) )
-
-
-    # Step 2: Define mathematical expression
-    # actiavtion funtion 1/(1+exp())
-    aas.append([])
-    for i in range(0,n1):
-        aas[ilayer].append( 1/(1+T.exp(-T.dot(x,ws[ilayer][i])-bs[ilayer])) )
-
-
-    stacked_aas = []
     bs.append( theano.shared(1.) )
-    aas.append([])
-    ilayer = 1
     ws.append([])
-    for i in range(0, Ns[-1]):
-        # due to algebraic purposes:
-        stacked_aas.append(T.stack(aas[0],axis=1))
-        # last node combines 2 into one
+    aas.append([])
+    for i in range(0,n1):
+        ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,n0) ])) )
+    # Step 2: Define mathematical expression
+    # activation funtion 1/(1+exp())
+    for i in range(0,n1):
+        aas[ilayer].append( 1/(1+T.exp(-T.dot(x,ws[-1][i])-bs[-1])) )
+    # due to algebraic purposes, T.stack needs a list as input
+    stacked_aas.append(T.stack(aas[-1],axis=1))
+    print('*** defined first NN layer of {} neurons ***'.format(len(aas[-1])))
+    #print(aas[-1])
+
+    print('*** defining second NN layer ***')
+    ilayer = 1
+    bs.append( theano.shared(1.) )
+    ws.append([])
+    aas.append([])
+    for i in range(0, n2):
         ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,n1) ])) )
-        aas[ilayer].append ( 1/(1+T.exp(-T.dot(stacked_aas[-1],ws[ilayer][-1])-bs[ilayer])) )
+    for i in range(0,n2):
+        aas[ilayer].append ( 1/(1+T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
+    stacked_aas.append(T.stack(aas[-1],axis=1))
+    print('*** defined second layer of {} neurons ***'.format(len(aas[-1])))
+    #print(aas[-1])
 
+    print('*** defining last single layer ***')
+    ilayer = 2
+    bs.append( theano.shared(1.) )
+    ws.append([])
+    aas.append([])
+    for i in range(0, n3):
+        ws[ilayer].append( theano.shared(np.array([ random() for j in range(0,n2) ])) )
+    for i in range(0, n3):
+        aas[ilayer].append( 1/(1+T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
+    print('*** defined last layer of {} neurons ***'.format(len(aas[-1])))
+    # no need to stack;)
+    
     # Step 3: Define gradient and update rule
-    print('Defining gradients...')
+    print('+++ defining gradients +++')
     a_hat = T.vector('a_hat') #Actual output
-    cost = T.log(1.)
-    ng = len(aas[-1])
-    print(ng)
-    for i in range(0, ng):
-        if i % 10 == 0:
-            print('{}/{}'.format(i,ng))
-        cost = cost + -(a_hat*T.log(aas[-1][i]) + (1.-a_hat)*T.log(1.-aas[-1][i])).sum()
+    #cost = T.log(1.)
+    #ng = len(aas[-1])
+    #print('Last number of neurons: {}'.format(ng))
+    #for i in range(0, ng):
+    #    if i % 10 == 0:
+    #        print('{}/{}'.format(i,ng))
+    #    cost = cost + -(a_hat*T.log(aas[-1][i]) + (1.-a_hat)*T.log(1.-aas[-1][i])).sum()
+    cost = -(a_hat*T.log(aas[-1][-1]) + (1.-a_hat)*T.log(1.-aas[-1][-1])).sum()
 
+    # gradiends of weights:
+    print('--- weight gradients ---')
     dws = []
-
     ng = len(ws)
-    print(ng)
+    print('# of w\'s to go through: {}'.format(ng))
     for i in range(0, ng):
-        if i % 10 == 0:
-            print('{}/{}'.format(i,ng))
+        print('  {}/{}'.format(i,ng))
         dws.append([])
         for j in range(0, len(ws[i])):
             dws[-1].append( T.grad(cost, ws[i][j]) )
-    
+
+    # gradiends of constant terms:
+    print('--- const. terms gradients ---')
     dbs = []
     ng = len(bs)
-    print(ng)
+    print('# of b\'s to go through: {}'.format(ng))
     for i in range(0, ng):
-        if i % 10 == 0:
-            print('{}/{}'.format(i,ng))
+        print('  {}/{}'.format(i,ng))
         dbs.append( T.grad(cost, bs[i]) )
         
     locupdates = []
     ng = len(ws)
     print(ng)
+    print('# of updates\'s to go through: {}'.format(ng))
     for i in range(0, ng):
-        if i % 10 == 0:
-            print('{}/{}'.format(i,ng))
+        print('  {}/{}'.format(i,ng))
         for j in range(0, len(ws[i])):
+            print('  {}/{}'.format(j,len(ws[i])))
             locupdates.append( [ws[i][j], ws[i][j] - learning_rate*dws[i][j]] )
     for i in range(0, len(bs)):
         locupdates.append( [bs[i], bs[i] - learning_rate*dbs[i]] )
 
-    print('Defining the function')
+    print('+++ defining the function +++')
     train = function(
         inputs = [x,a_hat],
         outputs = [aas[-1][-1],cost],
         updates = locupdates
     )
-
-
   
     inputs = []
     outputs = []
 
-    print('Reading images...')
+    print('+++ reading images +++')
+    ihex = -1
+    nhex = len(hexcodes)
+    nnoutmax = 1.
+    nnoutmin = 0.
+    delta = 0.1
+    sep = (nnoutmax - nnoutmin) / (nhex)
+    print('separation for outputs: {}'.format(sep))
     for hexcode in hexcodes:
-        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy)
+        ihex = ihex+1
+        # need to normalize this to be between 0 and 1;)
+        #hexout = int(hexcode, 16) / 128.
+        hexout = nnoutmin + ihex*sep + delta
+        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
         iimg = -1
+        print('will add images for class {} with output {}'.format(hexcode, hexout))
         for img in imgs:
             iimg = iimg+1
             #print('...appending input ', img)
             inputs.append(img)
-            # need to normalize this to be between 0 and 1;)
-            outputs.append(int(hexcode, 16) / 128.)
-            print('Set to train over class {} with total of {} images!'.format(hexcode, len(inputs)))
+            outputs.append(hexout)
             if iimg == 0:
-                PrintImg(img, baseDim, cutoffx, cutoffy)
+                PrintImgFrom1D(img, baseDimx)
+        print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, len(inputs)))
 
     #print('Inputs: ', inputs)
     #print('Outputs: ', outputs)
@@ -210,9 +247,9 @@ def main(argv):
     print('Training the model, linearized data dimension is {}'.format(DIM))
     
     #Iterate through all inputs and find outputs:
-    print('Training: Iterating through inputs, finding outputs...{} times'.format(i2-i1))
+    print('+++ Training: Iterating through inputs, finding outputs...{} times +++'.format(i2-i1))
     cost = []
-    nIters = 5000 # 30000
+    nIters = 1000 # 30000
     for iteration in range(0, nIters):
         pred, cost_iter = train(inputs, outputs)
         if iteration % 200 == 0:
@@ -220,7 +257,7 @@ def main(argv):
         cost.append(cost_iter)
 
     #Print the outputs:
-    print('The outputs of the NN are:')
+    print('+++ The outputs of the NN are: +++')
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
