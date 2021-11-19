@@ -19,120 +19,20 @@ from theano import function
 from random import random
 from random import uniform
 
-# numpy and plotting
-import matplotlib.pyplot as plt
-import numpy as np
-
 # JK
 from readTools import *
+
+from printAndPlotTools import *
 
 stuff = []
 
 ########################################################################################
-def PlotDataAsHisto(data, title='', nbs = 200, xmin = 0., xmax = 1.):
-    # https://www.tutorialspoint.com/numpy/numpy_histogram_using_matplotlib.htm
-    #np.histogram(data, bins = [0,20,40,60,80,100]) 
-    #hist,bins = np.histogram(data,bins = [0,20,40,60,80,100]) 
-    #print(hist)
-    #print(bins)
-    dx = (xmax - xmin) / nbs
-    plt.hist(data, bins = [dx * r for r in range(0,nbs+1)]) 
-    plt.title(title) 
-    plt.show()
-    plt.savefig('{}.png'.format(title))
-
 ########################################################################################
-def PrintWs(ws):
-    print('...printing w\'s...')
-    print('len(ws): {}'.format(len(ws)))
-    iw = -1
-    for w in ws:
-        iw = iw+1
-        print('len(w): {}'.format(len(w)))
-        iww = -1
-        for ww in w:
-            iww = iww+1
-            #print('len(ww): {}'.format(len(ww)))
-            vals = ww.get_value()
-            dim = len(vals)
-            print('* Dim of ww{}{}: {}, data: '.format(iw, iww, dim), end='')
-            #print(T.shape(ww))
-            for i in range(0,dim):
-                # slow:
-                #print(ww[i].eval(), ' ', end='')
-                # fast:
-                print('{:1.2f} '.format(vals[i]), end='')
-            print()
-    return
-
 ########################################################################################
-def PrintBs(bs):
-    print('...printing b\'s...')
-    print('len(bs): {}'.format(len(bs)))
-    ib = -1
-    for bb in bs:
-        ib = ib+1
-        #print('len(bb): {}'.format(len(bb)))
-        vals = bb.get_value()
-        print(vals)
-    return
 
-########################################################################################
-def PlotWs(ws, tag=''):
-    print('...printing w\'s...')
-    print('len(ws): {}'.format(len(ws)))
-    iw = -1
-
-    figs = []
-    for w in ws:
-        ws_array = []
-        iw = iw+1
-        print('len(w): {}'.format(len(w)))
-        iww = -1
-        for ww in w:
-            iww = iww+1
-            #print('len(ww): {}'.format(len(ww)))
-            vals = ww.get_value()
-            dim = len(vals)
-            line = []
-            print('Dim of ww{}{}: {}, data: '.format(iw, iww, dim), end='')
-            #print(T.shape(ww))
-            for i in range(0,dim):
-                # slow:
-                #print(ww[i].eval(), ' ', end='')
-                # fast:
-                print('{:1.2f} '.format(vals[i]), end='')
-                line.append(vals[i])
-            print()
-            ws_array.append(line)
-
-        # https://stackoverflow.com/questions/16492830/colorplot-of-2d-array-matplotlib/16492880
-        # inches:
-        #fig = plt.figure(figsize=(6, 3.2))
-        fig = plt.figure(figsize=(0.5 + 0.1*len(ws_array[0]), 0.5 + 0.1*len(ws_array)))
-            
-        ax = fig.add_subplot(111)
-        ax.set_title('colorMap')
-        #print(ws_array)
-        plt.imshow(ws_array)
-        ax.set_aspect('equal')
-        
-        #cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
-        #cax.get_xaxis().set_visible(False)
-        #cax.get_yaxis().set_visible(False)
-        #cax.patch.set_alpha(0)
-        #cax.set_frame_on(False)
-        plt.colorbar(orientation='vertical')
-        #plt.show()
-        plt.savefig('ws_{}{}.png'.format(iw, tag))
-
-        figs.append(plt)
-    return
-
-
-##########################################
-# https://www.tutorialspoint.com/python/python_command_line_arguments.htm
 def main(argv):
+
+    # https://www.tutorialspoint.com/python/python_command_line_arguments.htm
     #if len(sys.argv) > 1:
     #  foo = sys.argv[1]
 
@@ -168,8 +68,6 @@ def main(argv):
   
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
-
-
     print('Loading...')
 
 
@@ -181,34 +79,35 @@ def main(argv):
 
 
     # for reading test data 
-    # imgs ids i1..i2
+    # images range ids i1..i2
+    i1, i2 = 70, 460
     #i1, i2 = 70, 360
     #i1, i2 = 70, 210
-    i1, i2 = 70, 80
+    #i1, i2 = 70, 80
     #i1, i2 = 10, 10
     hexcodes = ['30', # 0 
                 '31', # 1
                 '32', # 2
                 '33', # 3
                 '34', # 4
-                '35', # 5
-                '36', # 6
-                '37', # 7
-                '38', # 8
-                '39', # 9
+                #'35', # 5
+                #'36', # 6
+                #'37', # 7
+                #'38', # 8
+                #'39', # 9
                 
                 #'5a', # z
     ]
-    
-    # Step 1: Define variables
 
-    #Define variables:
+    ##################################################
+    #           Step 1: Define variables             #
+    ##################################################
     #x = theano.tensor.fvector('x')
     x = T.matrix('x')
 
     # crop cutoff factor rebinned data:
     # todo: seems it does not work for different x,y cutoffs?
-    cutoffx,cutoffy = 20, 20
+    cutoffx,cutoffy = 16,20
     rebinx = 2
     rebiny = 2
     baseDimx = int(128  / rebinx) - 2*cutoffx
@@ -218,16 +117,16 @@ def main(argv):
     print('Got image dimension {}'.format(DIM))
     # lin dim for linearized img matrix
 
-    # TODO: redesign the neurons structure
-    # number of output neurons same as number of classes?
-    # or a smooth output with a range?
+    # TODO: redesign the neurons structure so that the number of output neurons same as number of classes?
+    # So far a smooth output with a range.
 
     # Learning STEERING!
-    learning_rate = 0.01 # 0.01
-    expPenalty = 1. # 1.
-    randDamp = 1.
+    learning_rate = 0.005 # 0.01
+    expAmplif = 1. # 1.
+    randDamp = 1. # 1.
     b0 = 1.
-    nIters = 2000 # 30000
+    nIters = 8000 # 30000
+    useReLu = True
     
     # weights, constants, and node outputs
     ws = []
@@ -252,13 +151,18 @@ def main(argv):
     for i in range(0,n1):
         # was: random()
         ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n0) ])) )
-    # Step 2: Define mathematical expression
-    # activation funtion 1/(1+exp())
+
+    ##################################################
+    # Step 2: Define mathematical expression         #
+    # activation funtion sigmoif 1/(1+exp()) or ReLu #
+    ##################################################
     for i in range(0,n1):
         # sigmoid:
-        aas[ilayer].append( 1/(1+expPenalty*T.exp(-T.dot(x,ws[-1][i])-bs[-1])) )
-        # ReLu:
-        #aas[ilayer].append( T.nnet.relu(T.dot(x,ws[-1][i])-bs[-1]) )
+        if not useReLu:
+            aas[ilayer].append( 1/(1+expAmplif*T.exp(-T.dot(x,ws[-1][i])-bs[-1])) )
+        else:
+            # ReLu:
+            aas[ilayer].append( T.nnet.relu(T.dot(x,ws[-1][i])-bs[-1]) )
     # due to algebraic purposes, T.stack needs a list as input
     stacked_aas.append(T.stack(aas[-1],axis=1))
     print('*** defined first NN layer of {} neurons ***'.format(len(aas[-1])))
@@ -272,10 +176,12 @@ def main(argv):
     for i in range(0, n2):
         ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n1) ])) )
     for i in range(0,n2):
-        # sigmoid
-        aas[ilayer].append ( 1/(1+expPenalty*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
-        # ReLu:
-        #aas[ilayer].append ( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
+        if not useReLu:
+            # sigmoid
+            aas[ilayer].append ( 1/(1+expAmplif*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
+        else:
+            # ReLu:
+            aas[ilayer].append ( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
     stacked_aas.append(T.stack(aas[-1],axis=1))
     print('*** defined second layer of {} neurons ***'.format(len(aas[-1])))
     #print(aas[-1])
@@ -288,10 +194,13 @@ def main(argv):
     for i in range(0, n3):
         ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n2) ])) )
     for i in range(0, n3):
+        # if not useReLu:
+        # LAST MUST BE SIGMOID!
         # sigmoid:
-        aas[ilayer].append( 1/(1+expPenalty*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
+        aas[ilayer].append( 1/(1+expAmplif*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
+        # else:
         # ReLu:
-        #aas[ilayer].append( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
+        #    aas[ilayer].append( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
     print('*** defined last layer of {} neurons ***'.format(len(aas[-1])))
     # no need to stack;)
 
@@ -300,10 +209,13 @@ def main(argv):
     #PrintWs(ws)
     #PrintBs(bs)
     PlotWs(ws, '_pre')
-    
-    # Step 3: Define gradient and update rule
+
+    ##################################################
+    #    Step 3: Define gradient and update rule     #
+    ##################################################
     print('+++ defining gradients +++')
     a_hat = T.vector('a_hat') #Actual output
+    # some tries:
     #cost = T.log(1.)
     #ng = len(aas[-1])
     #print('Last number of neurons: {}'.format(ng))
@@ -313,11 +225,12 @@ def main(argv):
     #    cost = cost + -(a_hat*T.log(aas[-1][i]) + (1.-a_hat)*T.log(1.-aas[-1][i])).sum()
 
     # original entropy cost function
+    # Also known as Bernoulli negative log-likelihood and Binary Cross-Entropy
+    # c.f. https://stats.stackexchange.com/questions/154879/a-list-of-cost-functions-used-in-neural-networks-alongside-applications
     #cost = -(a_hat*T.log(aas[-1][-1]) + (1.-a_hat)*T.log(1.-aas[-1][-1])).sum()
     # JK's chi2-like expression:
     cost = T.power(a_hat - aas[-1][-1], 2).sum()
 
-    
     # gradiends of weights:
     print('--- weight gradients ---')
     dws = []
@@ -338,7 +251,8 @@ def main(argv):
         print('  {}/{}'.format(i,ng))
         dbs.append( T.grad(cost, bs[i]) )
         
-    locupdates = []
+    locupdates = [] # for training
+    locNOupdates = [] # for testing
     ng = len(ws)
     print('# of updates\'s to go through: {}'.format(ng))
     for i in range(0, ng):
@@ -346,58 +260,30 @@ def main(argv):
         for j in range(0, len(ws[i])):
             #print('    {}/{}'.format(j,len(ws[i])))
             locupdates.append( [ws[i][j], ws[i][j] - learning_rate*dws[i][j]] )
+            # no learning nor updates anymore, will be sued for testing on unlearned data;)
+            locNOupdates.append( [ws[i][j], ws[i][j] - 0.*dws[i][j]] )
     for i in range(0, len(bs)):
         locupdates.append( [bs[i], bs[i] - learning_rate*dbs[i]] )
+        # no learning nor updates anymore, will be used for testing on unlearned data;)
+        locNOupdates.append( [bs[i], bs[i] - 0.*dbs[i]] )
 
-    print('+++ defining the function +++')
+    print('+++ defining the training function +++')
     train = function(
         inputs = [x,a_hat],
         outputs = [aas[-1][-1],cost],
         updates = locupdates
     )
-  
-    inputs = []
-    outputs = []
 
+    ##################################################
+    #      Step 4: read the input data (images)      #
+    ##################################################
     print('+++ reading images +++')
-    ihex = -1
-    nhex = len(hexcodes)
-    nnoutmax = 1.
-    nnoutmin = 0.
-    delta = 0.1
-
-
-    nExampleCharsToPrint = 7
+    inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
+   
+    ##################################################
+    #            Step 5: train the model             #
+    ##################################################
     
-    sep = (nnoutmax - nnoutmin) / (nhex)
-    print('separation for outputs: {}'.format(sep))
-    for hexcode in hexcodes:
-        ihex = ihex+1
-        # need to normalize this to be between 0 and 1;)
-        #hexout = int(hexcode, 16) / 128.
-        hexout = nnoutmin + ihex*sep + delta
-        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
-        iimg = -1
-        print('will add images for class {} with output {}'.format(hexcode, hexout))
-        linesToPrint = []
-        print('Example images:')
-        for img in imgs:
-            iimg = iimg+1
-            #print('...appending input ', img)
-            inputs.append(img)
-            outputs.append(hexout)
-            if iimg < nExampleCharsToPrint:
-                #print(img)
-                imglines = PrintImgFrom1D(img, baseDimx, False)
-                PutLineNextToLine(linesToPrint, imglines)
-        PrettyPrint(linesToPrint)
-        print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, len(inputs)))
-
-    #print('Inputs: ', inputs)
-    #print('Outputs: ', outputs)
-    
-    # Step 4: train the model:
-
     print('*** Training the model, linearized data dimension is {} ***'.format(DIM))
     
     #Iterate through all inputs and find outputs:
@@ -407,15 +293,18 @@ def main(argv):
     for iteration in range(0, nIters):
         pred, cost_iter = train(inputs, outputs)
         if iteration % 200 == 0:
-            print('Trainig iteration {}, cost: {}'.format(iteration, cost_iter))
+            print('Trainig iteration {}/{}, cost: {}'.format(iteration, nIters, cost_iter))
         cost.append(cost_iter)
 
     #Print the outputs:
     train_results = []
     print('+++ The outputs of the NN are: +++')
+    classesPrinted = {}
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
-        print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
+        if not outputs[i] in classesPrinted:
+            classesPrinted[outputs[i]] = pred[i]
+            print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
         train_results.append(pred[i])
         
     #Plot the flow of cost:
@@ -432,6 +321,28 @@ def main(argv):
     #PrintWs(ws)
     #PrintBs(bs)
     PlotWs(ws, '_post')
+
+    ##################################################
+    #           Step 5: test on new inputs!          #
+    ##################################################
+
+    """
+    print('+++ defining the< testing function +++')
+    predict = function(
+        inputs = [x,a_hat],
+        outputs = [aas[-1][-1],cost],
+        updates = locNOupdates
+    )
+    i1 =   1+i2
+    i2 = 100+i2
+    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
+    test_results = []
+    test_pred, test_cost = predict(test_inputs, test_outputs)
+    for i in range(len(test_inputs)):
+        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
+        print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
+        test_results.append(pred[i])
+     """
     
     return
     

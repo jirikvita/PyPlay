@@ -32,10 +32,10 @@ def PrintImg2DInv(img, thr = 0.25):
     for xline in img:
         line = ''
         for rgb in xline:
-            sstr = '1'
+            sstr = '\u2588'
             r,g,b = rgb[0], rgb[1], rgb[2]
             if 3. - (r+b+b) < thr:
-                sstr = '0'
+                sstr = ' '
             line = line + sstr
         print(line)
     return
@@ -48,9 +48,9 @@ def PrintImgFrom1D(img, ndimx, doprint):
     lines = []
     for pix in img:
         i = i+1
-        sstr = '0'
+        sstr = '\u2588'
         if pix > 0:
-            sstr = '1'
+            sstr = ' '
         line = line + str(sstr)
         if (i+1) % ndimx == 0:
             j = j+1
@@ -158,6 +158,45 @@ def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1
         img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny)
         imgs.append ( img )
     return imgs
+
+
+########################################################################################
+def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, nExampleCharsToPrint = 10): 
+    inputs = []
+    outputs = []
+    nhex = len(hexcodes)
+    nnoutmax = 1.
+    nnoutmin = 0.
+    delta = 0.1
+    ihex = -1
+
+    sep = (nnoutmax - nnoutmin) / (nhex)
+    print('separation for outputs: {}'.format(sep))
+    for hexcode in hexcodes:
+        ihex = ihex+1
+        # need to normalize this to be between 0 and 1;)
+        #hexout = int(hexcode, 16) / 128.
+        hexout = nnoutmin + ihex*sep + delta
+        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
+        iimg = -1
+        print('will add images for class {} with output {}'.format(hexcode, hexout))
+        linesToPrint = []
+        print('Example images:')
+        for img in imgs:
+            iimg = iimg+1
+            #print('...appending input ', img)
+            inputs.append(img)
+            outputs.append(hexout)
+            if iimg < nExampleCharsToPrint:
+                #print(img)
+                imglines = PrintImgFrom1D(img, baseDimx, False)
+                PutLineNextToLine(linesToPrint, imglines)
+        PrettyPrint(linesToPrint)
+        print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg))
+    print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
+    #print('Inputs: ', inputs)
+    #print('Outputs: ', outputs)
+    return inputs, outputs
 
 ########################################################################################
 ########################################################################################
