@@ -3,7 +3,7 @@
 # using data from https://github.com/CSSEGISandData/COVID-19
 
 
-from __future__ import print_function
+
 
 from math import sqrt, pow, log, exp
 import os, sys, getopt

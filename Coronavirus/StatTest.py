@@ -4,7 +4,7 @@ import ROOT
 
 import random
 
-print 'Usage: time ./StatTest.py'
+print('Usage: time ./StatTest.py')
 
 r3 = ROOT.TRandom3()
 N = 10000000
@@ -13,9 +13,9 @@ N = 10000000
 testROOT = False
 
 if testROOT:
-    print 'Testing ROOT rand speed...'
+    print('Testing ROOT rand speed...')
 else:
-    print 'Testing python rand speed...'
+    print('Testing python rand speed...')
     
 for i in range(0,N):
     if testROOT:

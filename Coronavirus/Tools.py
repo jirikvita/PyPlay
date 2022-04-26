@@ -6,7 +6,7 @@ from math import log10, sqrt, pow, fabs
 
 # distance scaling:
 gkm = 1.
-
+import ctypes
 
 cans = []
 stuff = []
@@ -27,7 +27,7 @@ def MakeAgeDeathFact():
         ages.append(age)
     ages.sort()
     for age in ages:
-        print(x0, age)
+        print((x0, age))
         errSF = 0.10 # arb. fractional error for better fit behaviour
         gr_ageDeathFact.SetPoint(ip, 0.5 * (age + x0), deathprobDict[age])
         gr_ageDeathFact.SetPointError(ip, 0., errSF*deathprobDict[age])
@@ -52,10 +52,10 @@ def CountPeople(families):
 #########################################
 def MakeDiffGr(gr1, gr2):
     dgr = ROOT.TGraphErrors()
-    x1 = ROOT.Double()
-    y1 = ROOT.Double()
-    x2 = ROOT.Double()
-    y2 = ROOT.Double()
+    x1 = ctypes.c_double()
+    y1 = ctypes.c_double()
+    x2 = ctypes.c_double()
+    y2 = ctypes.c_double()
     i1 = 0
     i2 = 0
     ip = 0
@@ -65,14 +65,18 @@ def MakeDiffGr(gr1, gr2):
             break
         gr1.GetPoint(i1, x1, y1)
         gr2.GetPoint(i2, x2, y2)
-        if fabs(x1 - x2) > 1e-3:
-            print('WARNING in MakeDiffGr: too different x values {}, {}. Shifting indices {} {}'.format(x1, x2, i1, i2))
-            if x1 < x2:
+        xx1 = x1.value
+        xx2 = x2.value
+        yy1 = y1.value
+        yy2 = y2.value
+        if fabs(xx1 - xx2) > 1e-3:
+            print(('WARNING in MakeDiffGr: too different x values {}, {}. Shifting indices {} {}'.format(xx1, xx2, i1, i2)))
+            if xx1 < xx2:
                 i1 += 1
             else:
                 i2 += 1
             continue
-        diff = y1-y2
+        diff = yy1-yy2
         err = sqrt(fabs(diff))
         dgr.SetPoint(ip, x1, diff)
         dgr.SetPointError(ip, 0, err)
@@ -84,15 +88,19 @@ def MakeDiffGr(gr1, gr2):
 #########################################
 def MakeDerivative(gr):
     dgr = ROOT.TGraph()
-    x1 = ROOT.Double()
-    y1 = ROOT.Double()
-    x2 = ROOT.Double()
-    y2 = ROOT.Double()
+    x1 = ctypes.c_double()
+    y1 = ctypes.c_double()
+    x2 = ctypes.c_double()
+    y2 = ctypes._double()
+    xx1 = x1.value
+    xx2 = x2.value
+    yy1 = y1.value
+    yy2 = y2.value
     for i in range(0,gr.GetN()-1):
         gr.GetPoint(i, x1, y1)
         gr.GetPoint(i + 1, x2, y2)
-        der = (y2-y1) / (x2-x1)
-        x = 0.5*(x1+x2)
+        der = (yy2-yy1) / (xx2-xx1)
+        x = 0.5*(xx1+xx2)
         dgr.SetPoint(i, x, der)
         # err = ...
         # dgr.SetPointError(i, x, err)
@@ -110,10 +118,10 @@ def CopyStyle(g1, g2):
 #########################################
 def MakeSeqRatio(gr):
     dgr = ROOT.TGraph()
-    x1 = ROOT.Double()
-    y1 = ROOT.Double()
-    x2 = ROOT.Double()
-    y2 = ROOT.Double()
+    x1 = ctypes.c_double()
+    y1 = ctypes.c_double()
+    x2 = ctypes.c_double()
+    y2 = ctypes.c_double()
     i = 0
     for ii in range(0,gr.GetN()-1):
         gr.GetPoint(ii, x1, y1)

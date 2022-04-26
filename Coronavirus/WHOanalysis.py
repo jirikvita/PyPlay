@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
-from __future__ import print_function
+
 import ROOT, os, sys
 # jk 12.2.2020
 
 from math import sqrt, pow
 from Tools import *
 from DataWHO import *
+import ctypes
 
 cans = []
 stuff = []
@@ -43,16 +44,16 @@ CountriesCols = { 'China'   : [ ROOT.kRed,       24],
                   #'Canada, BC' : [ ROOT.kYellow+2 , 33], # 'Washington US'
 }
 
-lsts = range(1, 30)
+lsts = list(range(1, 30))
 tags = ['Global', 'China', 'non-China', 'Korea South', 'Japan', 'Italy', 'Germany', 'Czechia', 'Austria', 'France', 'Spain', 'UK', 'Iran', 'USA' ]
 #toFitIndices = range(3,10)
 ##toFitIndices = [5, 6, 7,]
 #toFitIndices = [7,]
-toFitIndices = range(3,len(tags))
+toFitIndices = list(range(3,len(tags)))
 # not to add to the non-China sum twice:
-skipIndices = range(3,len(tags))
+skipIndices = list(range(3,len(tags)))
 # for prediction:
-evalPoints = range(55, 69)
+evalPoints = list(range(55, 69))
 
 ndata = len(tags)
 for i in range(0,ndata):
@@ -195,11 +196,11 @@ for gr_case, gr_death, tag, lst in zip(gr_cases, gr_deaths, tags, lsts):
     dgr_death.Draw('C')
 
     if ig in toFitIndices:
-        xx = ROOT.Double()
-        yy = ROOT.Double()
+        xx = ctypes.c_double()
+        yy = ctypes.c_double()
         gr_case.GetPoint(gr_case.GetN()-1, xx, yy)
-        x2 = xx + kLastDaysToFit + 0.5
-        x1 = xx - kLastDaysToFit + 0.5
+        x2 = xx.value + kLastDaysToFit + 0.5
+        x1 = xx.value - kLastDaysToFit + 0.5
         fitname = gr_case.GetName() + '_fit'
         fit_case = ROOT.TF1(fitname, '[0]*exp([1]*x)', x1, x2)
         fit_case.SetLineColor(gr_case.GetMarkerColor())

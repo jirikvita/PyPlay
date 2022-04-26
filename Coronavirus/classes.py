@@ -174,7 +174,7 @@ class cworld:
 
   def PrintStatus(self, families):
       sstr = self.GetStatusStr(families)
-      print('day {} step {} '.format(self._day, self._step,) + sstr)
+      print(('day {} step {} '.format(self._day, self._step,) + sstr))
 
   def FillHistos(self, families):
       ##setMax = False

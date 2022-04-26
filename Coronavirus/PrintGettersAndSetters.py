@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # jiri kvita 2020
 
-from __future__ import print_function
+
 
 #cname = 'cparams'
 #members = ['transmissionProb', 'spreadRadius', 'deathProb', 'healProb', 'sickTurnProb', 'superSpreadFraction', 'initialSickFraction', 'maxDaysSick', 'ageDeathFact', 'maxAge']

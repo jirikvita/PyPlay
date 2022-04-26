@@ -46,7 +46,7 @@ def MakeHistos(nTotIters):
     for key in gKeys:
         histo = histos[str(key)]
         for key2 in gKeys:
-            print('Setting bin {:} label to {:}'.format(key2+1, gKeyNames[key2]))
+            print(('Setting bin {:} label to {:}'.format(key2+1, gKeyNames[key2])))
             histo.GetXaxis().SetBinLabel(key2+1, gKeyNames[key2])
     name = 'h_age'
     title = ';age;people'
@@ -113,7 +113,7 @@ def MakeRandomXY(world):
 #########################################    
 def MakeFamilies(world, attractors, params, Nfamilies, nAverInFamily, xmin, xmax, ymin, ymax):
     families = []
-    for i in xrange(0, Nfamilies):
+    for i in range(0, Nfamilies):
         x,y = MakeRandomXY(world)
         Family = MakeFamily(world, attractors, params, x, y, nAverInFamily)
         families.append(Family)
@@ -243,7 +243,7 @@ def ShowWorld(world, attractors, nPeople):
       cloneAge_h.SetLineColor(Age_h.GetFillColor())
       cloneAge_h.SetFillColor(0)
       cloneAge_h.SetFillStyle(0)
-      print('Initial age mean: {:}'.format(cloneAge_h.GetMean()))
+      print(('Initial age mean: {:}'.format(cloneAge_h.GetMean())))
       world.GetHistos()['iage'] = cloneAge_h
   #world.GetHistos()['iage'].SetMinimum(1.)
   world.GetHistos()['iage'].Draw('hist')
@@ -354,7 +354,7 @@ def main(argv):
     ### https://docs.python.org/3.1/library/getopt.html
     gBatch = False
     gTag=''
-    print(argv[1:])
+    print((argv[1:]))
     try:
         # options that require an argument should be followed by a colon (:).
         opts, args = getopt.getopt(argv[2:], 'hbt:', ['help','batch','tag='])
@@ -365,24 +365,24 @@ def main(argv):
     except getopt.GetoptError:
         print('Parsing...')
         print ('Command line argument error!')
-        print('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]]'.format(argv[0]))
+        print(('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]]'.format(argv[0])))
         sys.exit(2)
     for opt,arg in opts:
-        print('Processing command line option {} {}'.format(opt,arg))
+        print(('Processing command line option {} {}'.format(opt,arg)))
         if opt == '-h':
-            print('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]'.format(argv[0]))
+            print(('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]'.format(argv[0])))
             sys.exit()
         elif opt in ("-b", "--batch"):
             gBatch = True
         elif opt in ("-t", "--tag"):
             gTag = arg
-            print('OK, using user-defined histograms tag for output pngs {:}'.format(gTag,) )
+            print(('OK, using user-defined histograms tag for output pngs {:}'.format(gTag,) ))
 
     if gBatch:
         ROOT.gROOT.SetBatch(1)
 
     print('*** Settings:')
-    print('tag={:}, batch={:}'.format(gTag, gBatch))
+    print(('tag={:}, batch={:}'.format(gTag, gBatch)))
 
 
     ############
@@ -533,9 +533,9 @@ def main(argv):
     quarantineDay = 1 # nDays / 3
     qfrac = 0.98
     
-    for day in xrange(0, nDays):
+    for day in range(0, nDays):
         world.SetStep(0)
-        for it in xrange(0, nTimeSteps):
+        for it in range(0, nTimeSteps):
             if applyQuarantene and (it == nTimeSteps-1 or nTimeSteps/10 == 0):
                 ApplyQuarantine(families, world.GetRand(), qfrac)
             world.FillHistos(families)
@@ -547,7 +547,7 @@ def main(argv):
 
     if len(world._rundir) > 0:
         tarfile = '{}.tgz'.format(world._rundir[:-1])
-        print ('Done, creating {}...'.format(tarfile))
+        print(('Done, creating {}...'.format(tarfile)))
         os.system('tar czf {} {}'.format(tarfile, world._rundir))
     
     print ('DONE!;-)')

@@ -5,7 +5,7 @@
 
 # TODO: clicable page with linear scale date from each country!
 
-from __future__ import print_function
+
 
 import ROOT
 from math import sqrt, pow, log, exp
@@ -13,6 +13,7 @@ import os, sys, getopt
 
 from Tools import CopyStyle, MakeDiffGr
 
+import ctypes
 
 cans = []
 stuff = []
@@ -299,8 +300,8 @@ def main(argv):
         countries.append(gname)
     print(countries)
     
-    msts = range(20, 50)
-    lsts = range(1, 30)
+    msts = list(range(20, 50))
+    lsts = list(range(1, 30))
     opt = 'P'
     ig = -1
     fits = {}
@@ -362,12 +363,12 @@ def main(argv):
             fit_hist = ROOT.TF1('fit_hist_{}'.format(country), '[0]*exp([1]*x)', xx1, xx2) # xmin - off, xmax - off)
             fit_hist.SetLineColor(graph.GetMarkerColor())
             fit_hist.SetLineStyle(1)
-            xx = ROOT.Double()
-            yy = ROOT.Double()
+            xx = ctypes.c_double()
+            yy = ctypes.c_double()
             iday =  - (graphs['Hubei China'].GetN() - graphs[country].GetN() ) + kHistoryDay0
             graphs[country].GetPoint(iday, xx, yy)
             aguess = 0.3
-            print('Setting parameters from point {} to {} {} {}'.format(iday, yy, aguess, xx))
+            print('Setting parameters from point {} to {} {} {}'.format(iday, yy.value, aguess, xx.value))
             fit_hist.SetParameters(yy, aguess)#, xx)
             fits_history[country] = fit_hist
             graph.Fit(fit_hist, "", "", xx1, xx2) #xmin - off, xmax - off)
