@@ -25,7 +25,7 @@ sampleName = { 0 : 't#bar{t} p_{T,j1,j2}^{min} = 200 GeV',
 
 xLabels = {'tau21' : '#tau_{21}',
            'tau32' : '#tau_{32}',
-           'mass' : 'm_{J}'}
+           'mass' : 'm_{J} [GeV]'}
 
 ####################################################################################
 
@@ -47,14 +47,14 @@ def MakeHisto(items, sample, isample, var):
     
     print('Histo ', nbins, x1, x2)
     hname = '{}_{}'.format(var, sample)
-    htitle = hname + ';{}'.format(xLabels[var])
+    htitle = hname + ';{};jet fraction [%]'.format(xLabels[var])
     h = ROOT.TH1D(hname, htitle, nbins, x1, x2)
     ibin = 1
     for val in vals:
         h.SetBinContent(ibin, val)
         ibin = ibin + 1
-    h.Scale(1.)
     h.Scale(1./h.Integral())
+    h.Scale(100.)
     h.SetStats(0)
     h.SetLineColor(cols[isample])
     h.SetFillColorAlpha(cols[isample], 0.2)
@@ -138,7 +138,7 @@ def main(argv):
     legs = {}
     for var in hists:
         canname = 'histo_{}'.format(var)
-        cans[var] = ROOT.TCanvas(canname, canname, 0, 0, 800, 800)
+        cans[var] = ROOT.TCanvas(canname, canname, 0, 0, 900, 800)
         leg = ROOT.TLegend(0.30, 0.65, 0.88, 0.88)
         leg.SetBorderSize(0)
         opt = ''
