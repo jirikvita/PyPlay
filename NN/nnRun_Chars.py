@@ -7,7 +7,7 @@
 
 # python
 #import ROOT
-from math import sqrt, pow, log, exp
+from math import sqrt, pow, log, exp, fabs
 import os, sys, getopt
 
 # theano
@@ -80,21 +80,24 @@ def main(argv):
 
     # for reading test data 
     # images range ids i1..i2
-    i1, i2 = 70, 460
+    # DEFAULT:
+    # i1, i2 = 70, 460
+
+    
     #i1, i2 = 70, 360
-    #i1, i2 = 70, 210
+    i1, i2 = 70, 210
     #i1, i2 = 70, 80
     #i1, i2 = 10, 10
     hexcodes = ['30', # 0 
                 '31', # 1
                 '32', # 2
                 '33', # 3
-                '34', # 4
-                '35', # 5
-                '36', # 6
-                '37', # 7
-                '38', # 8
-                '39', # 9
+                #'34', # 4
+                #'35', # 5
+                #'36', # 6
+                #'37', # 7
+                #'38', # 8
+                #'39', # 9
                 
                 #'5a', # z
     ]
@@ -121,11 +124,11 @@ def main(argv):
     # So far a smooth output with a range.
 
     # Learning STEERING!
-    learning_rate = 0.005 # 0.01
+    learning_rate = 0.005 # 0.005
     expAmplif = 1. # 1.
     randDamp = 1. # 1.
     b0 = 1.
-    nIters = 8000 # 30000
+    nIters = 1000 # DEFAULT: 5000 # 8000
     useReLu = True
     
     # weights, constants, and node outputs
@@ -252,7 +255,6 @@ def main(argv):
         dbs.append( T.grad(cost, bs[i]) )
         
     locupdates = [] # for training
-    locNOupdates = [] # for testing
     ng = len(ws)
     print('# of updates\'s to go through: {}'.format(ng))
     for i in range(0, ng):
@@ -260,12 +262,9 @@ def main(argv):
         for j in range(0, len(ws[i])):
             #print('    {}/{}'.format(j,len(ws[i])))
             locupdates.append( [ws[i][j], ws[i][j] - learning_rate*dws[i][j]] )
-            # no learning nor updates anymore, will be sued for testing on unlearned data;)
-            locNOupdates.append( [ws[i][j], ws[i][j] - 0.*dws[i][j]] )
     for i in range(0, len(bs)):
         locupdates.append( [bs[i], bs[i] - learning_rate*dbs[i]] )
         # no learning nor updates anymore, will be used for testing on unlearned data;)
-        locNOupdates.append( [bs[i], bs[i] - 0.*dbs[i]] )
 
     print('+++ defining the training function +++')
     train = function(
@@ -273,6 +272,12 @@ def main(argv):
         outputs = [aas[-1][-1],cost],
         updates = locupdates
     )
+    print('+++ defining the testing function +++')
+    predict = function(
+        inputs = [x,a_hat],
+        outputs = [aas[-1][-1],cost]
+    )
+
 
     ##################################################
     #      Step 4: read the input data (images)      #
@@ -296,15 +301,16 @@ def main(argv):
             print('Trainig iteration {}/{}, cost: {}'.format(iteration, nIters, cost_iter))
         cost.append(cost_iter)
 
-    #Print the outputs:
+    # Print the outputs on the training set:
     train_results = []
-    print('+++ The outputs of the NN are: +++')
+    print('+++ The training outputs of the NN are: +++')
+    # printing last prediction pred
     classesPrinted = {}
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         if not outputs[i] in classesPrinted:
             classesPrinted[outputs[i]] = pred[i]
-            print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
+            print('The training output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
         train_results.append(pred[i])
         
     #Plot the flow of cost:
@@ -326,25 +332,59 @@ def main(argv):
     #           Step 5: test on new inputs!          #
     ##################################################
 
-    """
-    print('+++ defining the< testing function +++')
-    predict = function(
-        inputs = [x,a_hat],
-        outputs = [aas[-1][-1],cost],
-        updates = locNOupdates
-    )
     i1 =   1+i2
-    i2 = 100+i2
-    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
+    i2 = 200+i2
+    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1)
     test_results = []
+
+    # create also NN output histograms for individual characters
+    test_resultsDict = {}
+    
     test_pred, test_cost = predict(test_inputs, test_outputs)
+    NcorrectDict = {}
+    NallDict = {}
+    nAll = 0
+    nCorrect = 0
+    correctCut = 0.10
+
+
+    
     for i in range(len(test_inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
-        print('The output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
-        test_results.append(pred[i])
-     """
+        print('The output for true class {} is predicted as {:.2f}'.format(test_outputs[i],test_pred[i]))
+        diff = test_outputs[i] - test_pred[i]
+        #print(NallDict)
+        nAll = nAll + 1
+        if not test_outputs[i] in NallDict:
+            NallDict[test_outputs[i]] = 1
+            NcorrectDict[test_outputs[i]] = 0
+            test_resultsDict[test_outputs[i]] = []
+        else:
+            NallDict[test_outputs[i]] = NallDict[test_outputs[i]] + 1
+        if abs(diff) < correctCut:
+            NcorrectDict[test_outputs[i]] = NcorrectDict[test_outputs[i]] + 1
+            nCorrect = nCorrect + 1
+            
+        test_resultsDict[test_outputs[i]].append(test_pred[i])
+        test_results.append(test_pred[i])
+
+
+    frac = {}
+    print(NallDict)
+    print(NcorrectDict)
+    for key in NallDict:
+        frac[key] = (1.*NcorrectDict[key]) / (1.*NallDict[key])
+        print('Fraction of correct classification for class {} is {}'.format(key, frac[key]))
+    print(frac)
+    print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ))
+
+    PlotDataAsHisto(test_results, 'test_results')
+
+    for key,indiv_res in test_resultsDict.items():
+        PlotDataAsHisto(indiv_res, 'test_results' + str(key))
     
     return
+
     
 
 ###################################
