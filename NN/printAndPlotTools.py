@@ -6,16 +6,20 @@ import numpy as np
 
 
 ########################################################################################
-def PlotDataAsHisto(data, title='', nbs = 200, xmin = 0., xmax = 1.):
+def PlotDataAsHisto(data, title='', newFig = True, nbs = 200, xmin = 0., xmax = 1., col = 'blue', halpha = 0.35):
     # https://www.tutorialspoint.com/numpy/numpy_histogram_using_matplotlib.htm
     #np.histogram(data, bins = [0,20,40,60,80,100]) 
     #hist,bins = np.histogram(data,bins = [0,20,40,60,80,100]) 
     #print(hist)
     #print(bins)
+
+    if newFig:
+        plt.figure()
+    
     dx = (xmax - xmin) / nbs
-    plt.hist(data, bins = [dx * r for r in range(0,nbs+1)]) 
+    plt.hist(data, bins = [dx * r for r in range(0,nbs+1)], edgecolor='black', color = col, alpha = halpha) 
     plt.title(title) 
-    plt.show()
+    #plt.show()
     plt.savefig('{}.png'.format(title))
 
 ########################################################################################

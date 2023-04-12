@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # jiri kvita
 # Tue 12 Oct 14:32:31 CEST 2021
-# devel: Nov 2021
+# devel: Nov 2021, Apr 2023
+
 
 #from __future__ import print_function
 
@@ -81,11 +82,12 @@ def main(argv):
     # for reading test data 
     # images range ids i1..i2
     # DEFAULT:
-    # i1, i2 = 70, 460
+    #i1, i2 = 70, 460
+    i1, i2 = 200, 1800
 
     
     #i1, i2 = 70, 360
-    i1, i2 = 70, 210
+    #i1, i2 = 70, 210
     #i1, i2 = 70, 80
     #i1, i2 = 10, 10
     hexcodes = ['30', # 0 
@@ -128,7 +130,7 @@ def main(argv):
     expAmplif = 1. # 1.
     randDamp = 1. # 1.
     b0 = 1.
-    nIters = 1000 # DEFAULT: 5000 # 8000
+    nIters = 3000 # DEFAULT: 5000 # 8000
     useReLu = True
     
     # weights, constants, and node outputs
@@ -358,9 +360,10 @@ def main(argv):
         if not test_outputs[i] in NallDict:
             NallDict[test_outputs[i]] = 1
             NcorrectDict[test_outputs[i]] = 0
-            test_resultsDict[test_outputs[i]] = []
         else:
             NallDict[test_outputs[i]] = NallDict[test_outputs[i]] + 1
+        if not test_outputs[i] in  test_resultsDict:
+            test_resultsDict[test_outputs[i]] = []
         if abs(diff) < correctCut:
             NcorrectDict[test_outputs[i]] = NcorrectDict[test_outputs[i]] + 1
             nCorrect = nCorrect + 1
@@ -380,9 +383,22 @@ def main(argv):
 
     PlotDataAsHisto(test_results, 'test_results')
 
+    cols = ['yellow', 'green', 'blue', 'red', 'cyan', 'magenta', 'orange', 'pink', 'teal', 'grey']
+    nb = 100
+    x1 = 0.
+    x2 = 1.
+    icol = -1
+    newFig = True
     for key,indiv_res in test_resultsDict.items():
-        PlotDataAsHisto(indiv_res, 'test_results' + str(key))
-    
+        icol = icol + 1
+        print('plottig individual {} of length {}'.format(key, len(indiv_res)))
+        PlotDataAsHisto(indiv_res, 'test_results_split', newFig, nb, x1, x2, cols[icol])
+        #PlotDataAsHisto(indiv_res, 'test_results' + str(key), nweFig, nb, x1, x2, cols[icol])
+        newFig = False
+        
+
+    plt.show()
+        
     return
 
     

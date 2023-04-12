@@ -161,7 +161,7 @@ def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1
 
 
 ########################################################################################
-def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, nExampleCharsToPrint = 10): 
+def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTrain = True, nExampleCharsToPrint = 3): 
     inputs = []
     outputs = []
     nhex = len(hexcodes)
@@ -192,8 +192,13 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, nExam
                 imglines = PrintImgFrom1D(img, baseDimx, False)
                 PutLineNextToLine(linesToPrint, imglines)
         PrettyPrint(linesToPrint)
-        print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg))
-    print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
+        if toTrain:
+            print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg))
+            print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
+        else:
+            print('--- Set to test over class {} with total of {} images! ---'.format(hexcode, iimg))
+            print('--- Set to test over total of {} images! ---'.format(hexcode, len(inputs)))
+
     #print('Inputs: ', inputs)
     #print('Outputs: ', outputs)
     return inputs, outputs
