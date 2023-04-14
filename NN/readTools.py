@@ -10,10 +10,8 @@ from math import log10
 # https://www.nist.gov/srd/nist-special-database-19
 
 
-
 ########################################################################################
 def MakeDigitStr(i, digits = 3):
-    # from /home/qitek/Dropbox/work/Vyuka/SFVE/Poznamky_Cz/Toys/PeakSim/PeakSim.py
     tag = str(i)
     n = digits
     try: 
@@ -59,6 +57,7 @@ def PrintImgFrom1D(img, ndimx, doprint):
             lines.append(line + '')
             line = ''
     return lines
+
 ########################################################################################
 def PutLineNextToLine(linesToPrint, imglines, sep=' '):
     iline = -1
@@ -69,6 +68,7 @@ def PutLineNextToLine(linesToPrint, imglines, sep=' '):
         else:
             linesToPrint[iline] = linesToPrint[iline] + sep + imgline
     return linesToPrint
+
 ########################################################################################
 def PrettyPrint(arrayToPrint):
     for line in arrayToPrint:
@@ -148,8 +148,6 @@ def Rebin2DRGBArray(data, rebinx = 2, rebiny = 2, doAver = True):
 
 
 ########################################################################################
-
-
 def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1):
     imgs = []
     for i in range(i1, i2):
@@ -167,19 +165,21 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
     nhex = len(hexcodes)
     nnoutmax = 1.
     nnoutmin = 0.
-    delta = 0.1
+    delta = 0.05 ###!!! was: 0.1
     ihex = -1
 
     sep = (nnoutmax - nnoutmin) / (nhex)
-    print('separation for outputs: {}'.format(sep))
+    print('separation for outputs: {:1.3f}'.format(sep))
     for hexcode in hexcodes:
         ihex = ihex+1
         # need to normalize this to be between 0 and 1;)
         #hexout = int(hexcode, 16) / 128.
         hexout = nnoutmin + ihex*sep + delta
+        if hexout > 1.:
+            print('ERROR: required output for {} is {}, i.e. above 1!'.format(ihex, hexout))
         imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
         iimg = -1
-        print('will add images for class {} with output {}'.format(hexcode, hexout))
+        print('will add images for class {} with output {:1.4f}'.format(hexcode, hexout))
         linesToPrint = []
         print('Example images:')
         for img in imgs:
@@ -193,10 +193,10 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
                 PutLineNextToLine(linesToPrint, imglines)
         PrettyPrint(linesToPrint)
         if toTrain:
-            print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg))
+            print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg+1))
             print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
         else:
-            print('--- Set to test over class {} with total of {} images! ---'.format(hexcode, iimg))
+            print('--- Set to test over class {} with total of {} images! ---'.format(hexcode, iimg+1))
             print('--- Set to test over total of {} images! ---'.format(hexcode, len(inputs)))
 
     #print('Inputs: ', inputs)

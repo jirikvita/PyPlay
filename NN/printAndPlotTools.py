@@ -4,9 +4,31 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+########################################################################################
+########################################################################################
+########################################################################################
+
 
 ########################################################################################
-def PlotDataAsHisto(data, title='', newFig = True, nbs = 200, xmin = 0., xmax = 1., col = 'blue', halpha = 0.35):
+def PlotCost(cost, trainTag):
+    #Plot the flow of cost:
+    #print('\nThe flow of cost during model run is as following:')
+    # matplotlib inline
+    #plt.plot(normcost)
+    #plt.show()
+    #plt.savefig('NNout_{}_imgRanges.png'.format(trainTag))
+
+    plt.figure()
+    # plt.scatter(range(1, len(cost)+1), cost, color = 'red' )
+    plt.plot(range(1, len(cost)+1), cost, 'o', color = 'red', linewidth = 1, markersize = 2, linestyle = 'dotted') # 'go--'
+    plt.xlabel('Epoch')
+    plt.ylabel('Cost')
+    plt.title('Cost evolution')
+    plt.savefig('{}.png'.format('CostEvolution_{}'.format(trainTag)))
+    return
+
+########################################################################################
+def PlotDataAsHisto(data, title, trainTag, newFig = True, nbs = 200, xmin = 0., xmax = 1., col = 'blue', halpha = 0.35):
     # https://www.tutorialspoint.com/numpy/numpy_histogram_using_matplotlib.htm
     #np.histogram(data, bins = [0,20,40,60,80,100]) 
     #hist,bins = np.histogram(data,bins = [0,20,40,60,80,100]) 
@@ -20,7 +42,7 @@ def PlotDataAsHisto(data, title='', newFig = True, nbs = 200, xmin = 0., xmax = 
     plt.hist(data, bins = [dx * r for r in range(0,nbs+1)], edgecolor='black', color = col, alpha = halpha) 
     plt.title(title) 
     #plt.show()
-    plt.savefig('{}.png'.format(title))
+    plt.savefig('{}_{}.png'.format(title, trainTag))
 
 ########################################################################################
 def PrintWs(ws):
@@ -59,7 +81,7 @@ def PrintBs(bs):
     return
 
 ########################################################################################
-def PlotWs(ws, tag=''):
+def PlotWs(ws, trainTag):
     print('...plotting w\'s...')
     iw = -1
 
@@ -97,7 +119,27 @@ def PlotWs(ws, tag=''):
         #cax.set_frame_on(False)
         plt.colorbar(orientation='vertical')
         #plt.show()
-        plt.savefig('ws_{}{}.png'.format(iw, tag))
+        plt.savefig('ws_{}{}.png'.format(iw, trainTag))
 
         figs.append(plt)
     return
+
+########################################################################################
+def PlotIndivDataAsHisto(resultsDict, title, trainTag):
+    cols = ['yellow', 'green', 'blue', 'red', 'cyan', 'magenta', 'orange', 'pink', 'teal', 'grey']
+    nb = 100
+    x1 = 0.
+    x2 = 1.
+    icol = -1
+    newFig = True
+    for key,indiv_res in resultsDict.items():
+        icol = icol + 1
+        print('plottig individual {} of length {}'.format(key, len(indiv_res)))
+        PlotDataAsHisto(indiv_res, title + '_split', trainTag, newFig, nb, x1, x2, cols[icol])
+        #PlotDataAsHisto(indiv_res, title + '' + str(key), trainTag, nweFig, nb, x1, x2, cols[icol])
+        newFig = False
+
+
+
+########################################################################################
+########################################################################################

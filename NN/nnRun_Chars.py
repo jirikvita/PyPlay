@@ -3,11 +3,6 @@
 # Tue 12 Oct 14:32:31 CEST 2021
 # devel: Nov 2021, Apr 2023
 
-
-#from __future__ import print_function
-
-# python
-#import ROOT
 from math import sqrt, pow, log, exp, fabs
 import os, sys, getopt
 
@@ -22,7 +17,6 @@ from random import uniform
 
 # JK
 from readTools import *
-
 from printAndPlotTools import *
 
 stuff = []
@@ -79,28 +73,42 @@ def main(argv):
     # train the NN on the train data
 
 
-    # for reading test data 
+
+    # Learning STEERING!
+    learning_rate = 0.005 # 0.005 # 0.005
+    nIters = 400 # DEFAULT: 1000, 5000, 8000
+
+    # STEERING of the NN dimensions / architecture!
+    Ns = [32, 32, 1]
+    
+    # for reading test data
+    # STEERING: 
+    # test set size!
+    ntested = 2000
+    i1 = 0
+    i2 = i1 + ntested
+    
     # images range ids i1..i2
     # DEFAULT:
     #i1, i2 = 70, 460
-    i1, i2 = 200, 1800
-
+    #i1, i2 = 200, 2200
+    #i1, i2 = 200, 1200
     
     #i1, i2 = 70, 360
     #i1, i2 = 70, 210
     #i1, i2 = 70, 80
     #i1, i2 = 10, 10
+    
     hexcodes = ['30', # 0 
                 '31', # 1
                 '32', # 2
-                '33', # 3
+                #'33', # 3
                 #'34', # 4
                 #'35', # 5
                 #'36', # 6
                 #'37', # 7
                 #'38', # 8
                 #'39', # 9
-                
                 #'5a', # z
     ]
 
@@ -123,14 +131,10 @@ def main(argv):
     # lin dim for linearized img matrix
 
     # TODO: redesign the neurons structure so that the number of output neurons same as number of classes?
-    # So far a smooth output with a range.
+    # So far a smooth output within a range.
 
-    # Learning STEERING!
-    learning_rate = 0.005 # 0.005
-    expAmplif = 1. # 1.
-    randDamp = 1. # 1.
+    expAmplif = 2. # 1.
     b0 = 1.
-    nIters = 3000 # DEFAULT: 5000 # 8000
     useReLu = True
     
     # weights, constants, and node outputs
@@ -140,22 +144,32 @@ def main(argv):
     # list to store stacked neurons a's from each layer
     # later, this can hold just x as initial data on the zeroth position
     stacked_aas = []
-    
+
     # Ns = [5, 2, len(hexcodes) ]
-    Ns = [16, 16, 1]
+    # DEFAULT:
+    #Ns = [16, 16, 1]
     n0 = DIM
     n1 = Ns[0]
     n2 = Ns[1]
     n3 = Ns[2]
+
+    trainTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i1}_rate_{learning_rate:1.3f}'
+    print(f'Train tag: {trainTag}')
     
     print('*** defining first NN layer ***')
     ilayer = 0
     bs.append( theano.shared(1.*b0) )
     ws.append([])
     aas.append([])
+
+    # initial random weigths limits:
+    wmin = -1.
+    wmax = +1.
+    randDamp = 0.9 # 1.
+    
     for i in range(0,n1):
         # was: random()
-        ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n0) ])) )
+        ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(wmin, wmax) for j in range(0,n0) ])) )
 
     ##################################################
     # Step 2: Define mathematical expression         #
@@ -213,7 +227,7 @@ def main(argv):
     print('*** printing the random initial weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_pre')
+    PlotWs(ws, '_pre' + trainTag)
 
     ##################################################
     #    Step 3: Define gradient and update rule     #
@@ -274,7 +288,7 @@ def main(argv):
         outputs = [aas[-1][-1],cost],
         updates = locupdates
     )
-    print('+++ defining the testing function +++')
+    print('+++ defining the testing function  +++')
     predict = function(
         inputs = [x,a_hat],
         outputs = [aas[-1][-1],cost]
@@ -286,7 +300,8 @@ def main(argv):
     ##################################################
     print('+++ reading images +++')
     inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
-   
+    #print('Outputs: ', outputs)
+    
     ##################################################
     #            Step 5: train the model             #
     ##################################################
@@ -296,15 +311,19 @@ def main(argv):
     #Iterate through all inputs and find outputs:
     print('+++ Training: Iterating through inputs, finding outputs...{} times +++'.format(i2-i1))
     cost = []
-
+    normcost = []
+    
     for iteration in range(0, nIters):
         pred, cost_iter = train(inputs, outputs)
-        if iteration % 200 == 0:
-            print('Trainig iteration {}/{}, cost: {}'.format(iteration, nIters, cost_iter))
+        normcost_iter = cost_iter / ntested
+        if iteration % 100 == 0:
+            print('Trainig iteration {}/{}, cost: {:4.2f} cost/Nimgs: {:1.4f}'.format(iteration, nIters, cost_iter, normcost_iter))
         cost.append(cost_iter)
+        normcost.append(normcost_iter)
 
     # Print the outputs on the training set:
     train_results = []
+    train_resultsDict = {}
     print('+++ The training outputs of the NN are: +++')
     # printing last prediction pred
     classesPrinted = {}
@@ -313,29 +332,29 @@ def main(argv):
         if not outputs[i] in classesPrinted:
             classesPrinted[outputs[i]] = pred[i]
             print('The training output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
+        if not outputs[i] in  train_resultsDict:
+            train_resultsDict[outputs[i]] = []
         train_results.append(pred[i])
-        
-    #Plot the flow of cost:
-    print('\nThe flow of cost during model run is as following:')
-    # matplotlib inline
-    plt.plot(cost)
-    plt.show()
-    plt.savefig('NNout_n1_{}_n2_{}_imgRanges_i1_{}_i2_{}_rate_{:1.3f}.png'.format(n1, n2, i1, i2, learning_rate))
+        train_resultsDict[outputs[i]].append(pred[i])
 
-    PlotDataAsHisto(train_results, 'train_results')
+    #print(train_resultsDict)
+    PlotCost(normcost, trainTag)
+    PlotDataAsHisto(train_results, 'train_results', trainTag)
+    PlotIndivDataAsHisto(train_resultsDict, 'train_results', trainTag)
+
     
     # print the final weights
     print('*** printing the final weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_post')
-
+    PlotWs(ws, '_post' + trainTag)
+    
     ##################################################
     #           Step 5: test on new inputs!          #
     ##################################################
 
-    i1 =   1+i2
-    i2 = 200+i2
+    i1 = 1*i2
+    i2 = i1 + ntested # 500+i2
     test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1)
     test_results = []
 
@@ -348,14 +367,12 @@ def main(argv):
     nAll = 0
     nCorrect = 0
     correctCut = 0.10
-
-
     
     for i in range(len(test_inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
-        print('The output for true class {} is predicted as {:.2f}'.format(test_outputs[i],test_pred[i]))
+        # print('The output for true class {} is predicted as {:.2f}'.format(test_outputs[i],test_pred[i]))
         diff = test_outputs[i] - test_pred[i]
-        #print(NallDict)
+        # print(NallDict)
         nAll = nAll + 1
         if not test_outputs[i] in NallDict:
             NallDict[test_outputs[i]] = 1
@@ -381,21 +398,8 @@ def main(argv):
     print(frac)
     print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ))
 
-    PlotDataAsHisto(test_results, 'test_results')
-
-    cols = ['yellow', 'green', 'blue', 'red', 'cyan', 'magenta', 'orange', 'pink', 'teal', 'grey']
-    nb = 100
-    x1 = 0.
-    x2 = 1.
-    icol = -1
-    newFig = True
-    for key,indiv_res in test_resultsDict.items():
-        icol = icol + 1
-        print('plottig individual {} of length {}'.format(key, len(indiv_res)))
-        PlotDataAsHisto(indiv_res, 'test_results_split', newFig, nb, x1, x2, cols[icol])
-        #PlotDataAsHisto(indiv_res, 'test_results' + str(key), nweFig, nb, x1, x2, cols[icol])
-        newFig = False
-        
+    PlotDataAsHisto(test_results, 'test_results', trainTag)
+    PlotIndivDataAsHisto(test_resultsDict, 'test_results', trainTag)
 
     plt.show()
         
