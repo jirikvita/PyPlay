@@ -183,8 +183,8 @@ def main(argv):
         if code != hexcodes[-1]:
             trainChars = trainChars + '_'
     
-    trainTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
-    print(f'Train tag: {trainTag}')
+    setupTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
+    print(f'Train tag: {setupTag}')
     
     print('*** defining first NN layer ***')
     ilayer = 0
@@ -257,7 +257,7 @@ def main(argv):
     print('*** printing the random initial weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_pre' + trainTag)
+    PlotWs(ws, '_pre' + setupTag)
 
     ##################################################
     #    Step 3: Define gradient and update rule     #
@@ -356,80 +356,41 @@ def main(argv):
         cost.append(cost_iter)
         normcost.append(normcost_iter)
 
-    # Print the outputs on the training set:
-    train_results = []
-    train_resultsDict = {}
-    print('+++ The training outputs of the NN are: +++')
+    ####################################################################################################
+    #           Step 6: test trained classifier on the initial inputs, aka Asimov;)
+    ####################################################################################################
+
+
+    # Print the outputs on the Asimov set:
+    Asimov_results = []
+    Asimov_resultsDict = {}
+    print('+++ The Asimov outputs of the NN are: +++')
     # printing last prediction pred
     classesPrinted = {}
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         if not outputs[i] in classesPrinted:
             classesPrinted[outputs[i]] = pred[i]
-            print('The training output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
-        if not outputs[i] in  train_resultsDict:
-            train_resultsDict[outputs[i]] = []
-        train_results.append(pred[i])
-        train_resultsDict[outputs[i]].append(pred[i])
+            print('The Asimov output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
+        if not outputs[i] in  Asimov_resultsDict:
+            Asimov_resultsDict[outputs[i]] = []
+        Asimov_results.append(pred[i])
+        Asimov_resultsDict[outputs[i]].append(pred[i])
 
-    #print(train_resultsDict)
-    PlotCost(normcost, trainTag, 'Cost Evolution', 'red', 'dotted')
-    PlotDataAsHisto(train_results, 'train_results', trainTag)
-    PlotIndivDataAsHisto(train_resultsDict, 'train_results', trainTag)
+    #print(Asimov_resultsDict)
+    PlotCost(normcost, setupTag, 'Cost Evolution', 'red', 'dotted')
+    PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
+    PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
     
     # print the final weights
     print('*** printing the final weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_post' + trainTag)
-    
-
-    # NOT NEEDED, duplicated!!!
-    ##################################################
-    #           Step 5: test trained classifier on the initial inputs, aka Asimov;)
-    ##################################################
-
-
-    asimov_pred, asimov_cost = predict(inputs, outputs)
-
-    asimov_resultsDict = {}
-    asimov_results = []
-    # TO FINISH: move naming to asimov!
-    asimov_NcorrectDict = {}
-    asimov_NallDict = {}
-    nAll = 0
-    nCorrect = 0
-    # window half-width to judge correct result on the train set
-    correctCut = 0.10
-    for i in range(len(inputs)):
-        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
-        # print('The output for true class {} is predicted as {:.2f}'.format(outputs[i],asimov_pred[i]))
-        diff = outputs[i] - asimov_pred[i]
-        # print(asimov_NallDict)
-        nAll = nAll + 1
-        if not outputs[i] in asimov_NallDict:
-            asimov_NallDict[outputs[i]] = 1
-            asimov_NcorrectDict[outputs[i]] = 0
-        else:
-            asimov_NallDict[outputs[i]] = asimov_NallDict[outputs[i]] + 1
-        if not outputs[i] in  asimov_resultsDict:
-            asimov_resultsDict[outputs[i]] = []
-        if abs(diff) < correctCut:
-            asimov_NcorrectDict[outputs[i]] = asimov_NcorrectDict[outputs[i]] + 1
-            nCorrect = nCorrect + 1
-            
-        asimov_resultsDict[outputs[i]].append(asimov_pred[i])
-        asimov_results.append(asimov_pred[i])
- 
-    
-    PlotDataAsHisto(asimov_results, 'asimov_results', trainTag)
-    PlotIndivDataAsHisto(asimov_resultsDict, 'asimov_results', trainTag)
-
-    
+    PlotWs(ws, '_post' + setupTag)   
 
     
     ##################################################
-    #           Step 6: test on new inputs!          #
+    #           Step 7: test on new inputs!          #
     ##################################################
 
     i1 = 1*i2
@@ -456,18 +417,20 @@ def main(argv):
         diff = test_outputs[i] - test_pred[i]
         # print(NallDict)
         nAll = nAll + 1
-        if not test_outputs[i] in NallDict:
-            NallDict[test_outputs[i]] = 1
-            NcorrectDict[test_outputs[i]] = 0
+        #key = test_outputs[i]
+        key = hexcodes[i % len(hexcodes)]
+        if not key in NallDict:
+            NallDict[key] = 1
+            NcorrectDict[key] = 0
         else:
-            NallDict[test_outputs[i]] = NallDict[test_outputs[i]] + 1
-        if not test_outputs[i] in  test_resultsDict:
-            test_resultsDict[test_outputs[i]] = []
+            NallDict[key] = NallDict[key] + 1
+        if not key in  test_resultsDict:
+            test_resultsDict[key] = []
         if abs(diff) < correctCut:
-            NcorrectDict[test_outputs[i]] = NcorrectDict[test_outputs[i]] + 1
+            NcorrectDict[key] = NcorrectDict[key] + 1
             nCorrect = nCorrect + 1
             
-        test_resultsDict[test_outputs[i]].append(test_pred[i])
+        test_resultsDict[key].append(test_pred[i])
         test_results.append(test_pred[i])
 
 
@@ -482,17 +445,28 @@ def main(argv):
     print(fracDict)
     print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ))
 
-    PlotDataAsHisto(test_results, 'test_results', trainTag)
-    PlotIndivDataAsHisto(test_resultsDict, 'test_results', trainTag)
+    PlotDataAsHisto(test_results, 'test_results', setupTag)
+    PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
 
     # plot the accuracies:
-    PlotCost(frac, trainTag, 'accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
+    PlotCost(frac, setupTag, 'accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
 
+    # print to ascii
+    sumfrac = sum(frac)
+    outfile = open(f'accuracies{setupTag}_sum_{sumfrac:1.3f}.txt', 'w')
+    outfile.write('CharHexID : accuracy\n')
+    for key,frac in fracDict.items():
+        outfile.write(f'{key} : {frac:1.3f}\n')
+    outfile.write(f'Sum : {sumfrac:1.3f}\n')
+    outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ) + '\n')
+    outfile.close()
+    
     if not gBatch:
         plt.show()
 
-    os.system(f'mkdir results_{trainTag}')
-    os.system(f'mv *{trainTag}* results_{trainTag}/')
+    # move all results to a subdirectory
+    os.system(f'mkdir results{setupTag}')
+    os.system(f'mv *{setupTag}*.* results{setupTag}/')
     
     return
 

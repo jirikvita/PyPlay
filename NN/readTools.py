@@ -59,7 +59,7 @@ def PrintImgFrom1D(img, ndimx, doprint):
     return lines
 
 ########################################################################################
-def PutLineNextToLine(linesToPrint, imglines, sep=' '):
+def PutLineNextToLine(linesToPrint, imglines, sep = ' '):
     iline = -1
     for imgline in imglines:
         iline = iline+1

@@ -32,7 +32,9 @@ def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotte
     plt.xlabel(lx)
     plt.ylabel(ly)
     plt.title(label)
-    plt.savefig('{}_{}.png'.format(label.replace(' ','_'), trainTag))
+    if 'accur' in label:
+        plt.ylim(0., 1.)
+    plt.savefig('{}{}.png'.format(label.replace(' ','_'), trainTag))
     return
 
 ########################################################################################
