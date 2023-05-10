@@ -165,7 +165,7 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
     nhex = len(hexcodes)
     nnoutmax = 1.
     nnoutmin = 0.
-    delta = 0.05 ###!!! was: 0.1
+    delta = 0.1 ###!!! was: 0.1
     ihex = -1
 
     sep = (nnoutmax - nnoutmin) / (nhex)
@@ -194,10 +194,12 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
         PrettyPrint(linesToPrint)
         if toTrain:
             print('--- Set to train over class {} with total of {} images! ---'.format(hexcode, iimg+1))
-            print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
         else:
             print('--- Set to test over class {} with total of {} images! ---'.format(hexcode, iimg+1))
-            print('--- Set to test over total of {} images! ---'.format(hexcode, len(inputs)))
+    if toTrain:
+        print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
+    else:
+        print('--- Set to test over total of {} images! ---'.format(hexcode, len(inputs)))
 
     #print('Inputs: ', inputs)
     #print('Outputs: ', outputs)

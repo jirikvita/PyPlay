@@ -6,11 +6,19 @@ import numpy as np
 
 ########################################################################################
 ########################################################################################
-########################################################################################
 
 
 ########################################################################################
-def PlotCost(cost, trainTag):
+def PrintUnique(X):
+    uniq = []
+    for x in X:
+        if not x in uniq:
+            uniq.append(x)
+    print(uniq)
+    return uniq
+
+########################################################################################
+def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotted', lx = 'Epoch', ly = 'Cost evolution'):
     #Plot the flow of cost:
     #print('\nThe flow of cost during model run is as following:')
     # matplotlib inline
@@ -20,11 +28,11 @@ def PlotCost(cost, trainTag):
 
     plt.figure()
     # plt.scatter(range(1, len(cost)+1), cost, color = 'red' )
-    plt.plot(range(1, len(cost)+1), cost, 'o', color = 'red', linewidth = 1, markersize = 2, linestyle = 'dotted') # 'go--'
-    plt.xlabel('Epoch')
-    plt.ylabel('Cost')
-    plt.title('Cost evolution')
-    plt.savefig('{}.png'.format('CostEvolution_{}'.format(trainTag)))
+    plt.plot(range(1, len(cost)+1), cost, 'o', color = col, linewidth = 1, markersize = 2, linestyle = lst) # 'go--'
+    plt.xlabel(lx)
+    plt.ylabel(ly)
+    plt.title(label)
+    plt.savefig('{}_{}.png'.format(label.replace(' ','_'), trainTag))
     return
 
 ########################################################################################

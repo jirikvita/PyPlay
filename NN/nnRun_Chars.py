@@ -34,12 +34,29 @@ def main(argv):
     ### https://www.tutorialspoint.com/python/python_command_line_arguments.htm
     ### https://pymotw.com/2/getopt/
     ### https://docs.python.org/3.1/library/getopt.html
+
+    # for reading test data
+    # STEERING: 
+    # test set size!
+    ntested = 400 # 1000
+    i1 = 0
+    i2 = i1 + ntested
+    nIters = 200 # DEFAULT: 1000, 5000, 8000   
+    # STEERING of the NN dimensions / architecture!
+    inputn1 = 8
+    inputn2 = 8
+
+    # not controllable frtom cmd yet
+    # Learning STEERING!
+    learning_rate = 0.005 # 0.005 # 0.005
+    
     gBatch = False
     gTag=''
+    
     print(argv[1:])
     try:
         # options that require an argument should be followed by a colon (:).
-        opts, args = getopt.getopt(argv[2:], 'hbt:', ['help','batch','tag='])
+        opts, args = getopt.getopt(argv[1:], 'hbt:i:n:k:m:', ['help', 'batch', 'tag=', 'iters=', 'nimgs=', 'klayers=', 'mlayers='])
 
         print('Got options:')
         print(opts)
@@ -49,46 +66,53 @@ def main(argv):
         print ('Command line argument error!')
         print('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]]'.format(argv[0]))
         sys.exit(2)
+    print('Opts:')
+    print(opts)
     for opt,arg in opts:
         print('Processing command line option {} {}'.format(opt,arg))
-        if opt == '-h':
-            print('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]'.format(argv[0]))
+        if opt in ("-h", "--help"):
+            print('Usage: {:} [ -h -b --batch -t/--tag="MyCoolTag  -i/--iters=[] -n/--nimgs=[] -k/--klayers=[] -,/--mlayers=[] "]'.format(argv[0]))
             sys.exit()
         elif opt in ("-b", "--batch"):
             gBatch = True
         elif opt in ("-t", "--tag"):
             gTag = arg
             print('OK, using user-defined histograms tag for output pngs {:}'.format(gTag,) )
-
+        elif opt in ("-i", "--iters"):
+            nIters = int(arg)
+            print(f'OK, using user-defined number of iterations {nIters:}')
+        elif opt in ("-n", "--nimgs"):
+            ntested = int(arg)
+            print(f'OK, using user-defined number of images to train on as {ntested:}')
+        elif opt in ("-k", "--klayers"):
+            inputn1 = int(arg)
+            print(f'OK, using user-defined numbers in 1st hidden layer {inputn1:}')
+        elif opt in ("-m", "--mlayers"):
+            inputn2 = int(arg)
+            print(f'OK, using user-defined numbers in 1st hidden layer {inputn2:}')
   
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
     print('Loading...')
+    print('')
 
+    print(f'nIters: {nIters:}')
+    print(f'ntested: {ntested:}')
+    print(f'inputn1: {inputn1:}')
+    print(f'inputn2: {inputn2:}')
 
+    # HACK!
+    #return
+    
     # IDEA:
     # create then layers and neurons in a loop
     # read train data and convert them into linear numpy vectors
     # define the output categories as hex of the corresponding chars
     # train the NN on the train data
 
-
-
-    # Learning STEERING!
-    learning_rate = 0.005 # 0.005 # 0.005
-    nIters = 400 # DEFAULT: 1000, 5000, 8000
-
-    # STEERING of the NN dimensions / architecture!
-    Ns = [32, 32, 1]
+    Ns = [inputn1, inputn2, 1]
     
-    # for reading test data
-    # STEERING: 
-    # test set size!
-    ntested = 2000
-    i1 = 0
-    i2 = i1 + ntested
-    
-    # images range ids i1..i2
+     # images range ids i1..i2
     # DEFAULT:
     #i1, i2 = 70, 460
     #i1, i2 = 200, 2200
@@ -153,7 +177,13 @@ def main(argv):
     n2 = Ns[1]
     n3 = Ns[2]
 
-    trainTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i1}_rate_{learning_rate:1.3f}'
+    trainChars = 'train_'
+    for code in hexcodes:
+        trainChars =  trainChars + code
+        if code != hexcodes[-1]:
+            trainChars = trainChars + '_'
+    
+    trainTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
     print(f'Train tag: {trainTag}')
     
     print('*** defining first NN layer ***')
@@ -165,7 +195,7 @@ def main(argv):
     # initial random weigths limits:
     wmin = -1.
     wmax = +1.
-    randDamp = 0.9 # 1.
+    randDamp = 0.8 # 1.
     
     for i in range(0,n1):
         # was: random()
@@ -301,6 +331,8 @@ def main(argv):
     print('+++ reading images +++')
     inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
     #print('Outputs: ', outputs)
+    print('*** Train outputs:')
+    PrintUnique(outputs)
     
     ##################################################
     #            Step 5: train the model             #
@@ -314,9 +346,12 @@ def main(argv):
     normcost = []
     
     for iteration in range(0, nIters):
+        ###################################################
+        #                   TRAINING                      #
+        ###################################################
         pred, cost_iter = train(inputs, outputs)
         normcost_iter = cost_iter / ntested
-        if iteration % 100 == 0:
+        if iteration % 50 == 0 or iteration == 1:
             print('Trainig iteration {}/{}, cost: {:4.2f} cost/Nimgs: {:1.4f}'.format(iteration, nIters, cost_iter, normcost_iter))
         cost.append(cost_iter)
         normcost.append(normcost_iter)
@@ -338,10 +373,9 @@ def main(argv):
         train_resultsDict[outputs[i]].append(pred[i])
 
     #print(train_resultsDict)
-    PlotCost(normcost, trainTag)
+    PlotCost(normcost, trainTag, 'Cost Evolution', 'red', 'dotted')
     PlotDataAsHisto(train_results, 'train_results', trainTag)
     PlotIndivDataAsHisto(train_resultsDict, 'train_results', trainTag)
-
     
     # print the final weights
     print('*** printing the final weights ***')
@@ -349,13 +383,60 @@ def main(argv):
     #PrintBs(bs)
     PlotWs(ws, '_post' + trainTag)
     
+
+    # NOT NEEDED, duplicated!!!
     ##################################################
-    #           Step 5: test on new inputs!          #
+    #           Step 5: test trained classifier on the initial inputs, aka Asimov;)
+    ##################################################
+
+
+    asimov_pred, asimov_cost = predict(inputs, outputs)
+
+    asimov_resultsDict = {}
+    asimov_results = []
+    # TO FINISH: move naming to asimov!
+    asimov_NcorrectDict = {}
+    asimov_NallDict = {}
+    nAll = 0
+    nCorrect = 0
+    # window half-width to judge correct result on the train set
+    correctCut = 0.10
+    for i in range(len(inputs)):
+        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
+        # print('The output for true class {} is predicted as {:.2f}'.format(outputs[i],asimov_pred[i]))
+        diff = outputs[i] - asimov_pred[i]
+        # print(asimov_NallDict)
+        nAll = nAll + 1
+        if not outputs[i] in asimov_NallDict:
+            asimov_NallDict[outputs[i]] = 1
+            asimov_NcorrectDict[outputs[i]] = 0
+        else:
+            asimov_NallDict[outputs[i]] = asimov_NallDict[outputs[i]] + 1
+        if not outputs[i] in  asimov_resultsDict:
+            asimov_resultsDict[outputs[i]] = []
+        if abs(diff) < correctCut:
+            asimov_NcorrectDict[outputs[i]] = asimov_NcorrectDict[outputs[i]] + 1
+            nCorrect = nCorrect + 1
+            
+        asimov_resultsDict[outputs[i]].append(asimov_pred[i])
+        asimov_results.append(asimov_pred[i])
+ 
+    
+    PlotDataAsHisto(asimov_results, 'asimov_results', trainTag)
+    PlotIndivDataAsHisto(asimov_resultsDict, 'asimov_results', trainTag)
+
+    
+
+    
+    ##################################################
+    #           Step 6: test on new inputs!          #
     ##################################################
 
     i1 = 1*i2
     i2 = i1 + ntested # 500+i2
     test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1)
+    print('*** Test outputs:')
+    PrintUnique(test_outputs)
     test_results = []
 
     # create also NN output histograms for individual characters
@@ -366,6 +447,7 @@ def main(argv):
     NallDict = {}
     nAll = 0
     nCorrect = 0
+    # window half-width to judge correct result on the train set
     correctCut = 0.10
     
     for i in range(len(test_inputs)):
@@ -389,20 +471,29 @@ def main(argv):
         test_results.append(test_pred[i])
 
 
-    frac = {}
+    fracDict = {}
+    frac = []
     print(NallDict)
     print(NcorrectDict)
     for key in NallDict:
-        frac[key] = (1.*NcorrectDict[key]) / (1.*NallDict[key])
-        print('Fraction of correct classification for class {} is {}'.format(key, frac[key]))
-    print(frac)
+        fracDict[key] = (1.*NcorrectDict[key]) / (1.*NallDict[key])
+        frac.append(fracDict[key])
+        print('Fraction of correct classification for class {} is {}'.format(key, fracDict[key]))
+    print(fracDict)
     print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ))
 
     PlotDataAsHisto(test_results, 'test_results', trainTag)
     PlotIndivDataAsHisto(test_resultsDict, 'test_results', trainTag)
 
-    plt.show()
-        
+    # plot the accuracies:
+    PlotCost(frac, trainTag, 'accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
+
+    if not gBatch:
+        plt.show()
+
+    os.system(f'mkdir results_{trainTag}')
+    os.system(f'mv *{trainTag}* results_{trainTag}/')
+    
     return
 
     
