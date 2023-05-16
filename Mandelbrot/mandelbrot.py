@@ -64,13 +64,16 @@ def iterate(c, Nmax = 200, bound = 100.):
             break
         n = n + 1
         z = znew*c1
-    if bounded:
-        n = kMin
     return z,bounded, n
 
 ##################################################
 
 def Plot(nbx, x1, x2, nby, y1, y2, results):
+    ROOT.gStyle.SetPadTopMargin(0.)
+    ROOT.gStyle.SetPadBottomMargin(0.)
+    ROOT.gStyle.SetPadRightMargin(0.)
+    ROOT.gStyle.SetPadLeftMargin(0.)
+
     name = 'Mandelbrot'
     title = name
     h2 = ROOT.TH2D(name, title, nbx, x1, x2, nby, y1, y2)
@@ -81,26 +84,46 @@ def Plot(nbx, x1, x2, nby, y1, y2, results):
             h2.SetBinContent(i+1, j+1, results[i][j])
     h2.Scale(1.)
     canname = name
-    can = ROOT.TCanvas(canname, canname)
+    can = ROOT.TCanvas(canname, canname, 0, 0, 1200,1200)
     h2.SetStats(0)
-    ROOT.gStyle.SetPalette(ROOT.kAvocado)
     ROOT.gStyle.SetOptTitle(0)
     h2.Draw('col')
     can.SetLogz(1)
     can.Update()
+
+    palettes = {
+        'Standard' : 1,
+        'Avocado'  : ROOT.kAvocado,
+        'Rust'     : ROOT.kRust,
+        'Viridis'  : ROOT.kViridis,
+        'Cherry'   : ROOT.kCherry,
+        'DeepSea'  : ROOT.kDeepSea,
+    }
+    for key,palette in palettes.items():
+        ROOT.gStyle.SetPalette(palette)
+        ROOT.gPad.SetLogz(0)
+        can.Print(can.GetName() + f'_{key}_liny.png')
+        ROOT.gPad.SetLogz(1)
+        can.Print(can.GetName() + f'_{key}_logy.png')
+
+    
     return can,h2
 
 ##################################################
 ##################################################
 ##################################################
 
-x1, x2 = -1.45, 0.55
-y1, y2 = -1.1,1.1
-nbx = 2000
-nby = 2000
+
+
+ym = 1.1
+x1, x2 = -1.55, 0.55
+y1, y2 = -ym,ym
+
+nn = 2000
+nbx = nn
+nby = nn
 bwx = (x2 - x1) / nbx
 bwy = (y2 - y1) / nby
-
 
 results = []
 
@@ -110,12 +133,12 @@ verbose = False
 # bin centers bcx, bcy
 for i in range(0, nbx):
     if i % verb == 0:
-        print(f' xprocess {i}/{nbx}')
+        print(f' x loop progress {i}/{nbx}')
     results.append([])
     bcx = x1 + bwx* (i + 1/2.)
     for j in range(0, nby):
         #if j % verb == 0:
-        #    print(f'   yprocess {j}/{nby}')
+        #    print(f'   y loop progress {j}/{nby}')
 
         bcy = y1 + bwy* (j + 1/2.)
         c = MyComplex(bcx, bcy)
@@ -123,7 +146,7 @@ for i in range(0, nbx):
             print('Iterating...')
         zn,bounded,n = iterate(c)
         if bounded:
-            results[-1].append(0.)
+            results[-1].append(kMin)
         else:
             results[-1].append(n)
         if verbose:
@@ -132,6 +155,7 @@ for i in range(0, nbx):
 #print(results)
 can, h2 = Plot(nbx, x1, x2, nby, y1, y2, results)
 stuff.append([can,h2])
+
 
 ROOT.gApplication.Run()
 
