@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # jk 16.5.2023
 
+# https://en.wikipedia.org/wiki/Mandelbrot_set
+# https://mathworld.wolfram.com/MandelbrotSet.html
+
 from math import pow, sqrt
 import ROOT
 
