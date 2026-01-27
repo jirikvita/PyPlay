@@ -44,7 +44,7 @@ hc=197 # MeV fm
 # alpha particle:
 a=1 # fm
 m = 3700 # MeV
-V0 = 1000 # MeV
+V0 = 500 # MeV
 
 # electron
 #a=1.e6 # fm
@@ -61,13 +61,13 @@ fun1expr = '[1]*tan(x)^([0])'
 fun2expr = 'sqrt(([0]/x)^2-1)'
 
 ymax = 20.
-nx=100
-ny=1000
-h2=TH2D('Finite square well energy solutions', 'Finite square well energy solutions', nx, zero, z0, ny, 0, ymax)
+nx = 100
+ny = 1000
+h2 = TH2D('Finite square well energy solutions', 'Finite square well energy solutions', nx, zero, z0, ny, 0, ymax)
 #h2.SetOptTitle(0)
 h2.SetStats(0)
 
-canE = ROOT.TCanvas('FiniteWellEnergies')
+canE = ROOT.TCanvas('FiniteWellEnergySolutions')
 h2.Draw()
 
 lines = []
@@ -80,7 +80,7 @@ for pars in Pars:
     fun1 = TF1('well_1_%i' % (j,), fun1expr, zero, z0)
     fun1.SetParameter(0, 1.*pars[0])
     fun1.SetParameter(1, 1.*pars[1])
-    fun1.SetNpx(2000)
+    fun1.SetNpx(5000)
     fun1.SetLineColor(col[j])
     fun1.Draw(opt)
     Funs.append(fun1)
@@ -92,7 +92,7 @@ i=0
 fun2.SetParameter(0, pars[2])
 i=i+1
 
-fun2.SetNpx(2000)
+fun2.SetNpx(5000)
 fun2.SetLineColor(kRed)
 fun2.Draw(opt)
 Funs.append(fun2)
@@ -163,6 +163,33 @@ for parity in Zns:
         FunsSq.append([funLeftSq, funInSq, funRightSq])
 
 ################################################
+canEs = ROOT.TCanvas('FiniteWellEnergies', '', 300, 3000, 1200, 800)
+canEs.cd()
+potential = ROOT.TF1('fpot', ' 0. - (x>-[0])*(x<[0])*[1]', x1, x2)
+potential.SetLineColor(ROOT.kBlue)
+potential.SetParameters(a, V0)
+potential.SetNpx(5000)
+potential.SetLineWidth(3)
+hpot = ROOT.TH2D('hpot', ';x [fm];V(x) [MeV];', 100, x1, x2, 100, -1.2*V0, 0.2*V0)
+hpot.SetStats(0)
+hpot.Draw()
+potential.Draw('same')
+elines = []
+for E in Es:
+    line = ROOT.TLine(-a, E, a, E)
+    line.SetLineWidth(2)
+    line.SetLineColor(ROOT.kRed)
+    line.SetLineStyle(1)
+    line.Draw()
+    elines.append(line)
+stuff.append([elines, hpot, potential])
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
+ROOT.gPad.Update()
+
+
+
+################################################
 canf = ROOT.TCanvas('FiniteWellFunctions', '', 0, 0, 1600, 800)
 canf.cd()
 y1, y2 = -2, 2
@@ -170,13 +197,21 @@ h2 = ROOT.TH2D('tmp', ';x [fm];#psi(x);', 1000, x1, x2, 1000, y1, y2)
 h2.SetStats(0)
 h2.Draw()
 leg = ROOT.TLegend(0.7, 0.7, 0.88, 0.88)
-for funs in Funs:
-    col = max(1, int(10*random.random()) )
+cols = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen+2, ROOT.kCyan,
+        ROOT.kMagenta, ROOT.kTeal+10, ROOT.kOrange-3,
+        ROOT.kViolet, ROOT.kOrange, ROOT.kPink+10]
+for i,funs in enumerate(Funs):
+    #col = max(1, int(10*random.random()) )
+    col = -1
+    if i < len(cols):
+        col = cols[i]
+    else:
+        col = max(1, int(10*random.random()) )
     lsty = max(1, int(10*random.random()) )
     for fun in funs:
         fun.SetNpx(5000)
         fun.SetLineColor(col)
-        fun.SetLineStyle(lsty)
+        #fun.SetLineStyle(lsty)
         fun.Draw('same')
     leg.AddEntry(funs[1], funs[1].GetName(), 'PL')
 #leg.Draw()
@@ -185,20 +220,20 @@ for line in lines:
     line.SetLineStyle(2)
     line.SetLineColor(ROOT.kBlack)
     line.Draw()
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()
 
 ################################################
 canSq = ROOT.TCanvas('FiniteWellDensities', '', 0, 0, 1600, 800)
 canSq.cd()
 y1, y2 = 0, 1.2
-alpha = 0.1
-h2Sq = ROOT.TH2D('tmpSq', ';x [fm];#psi(x);', 1000, x1, x2, 1000, y1, y2)
+alpha = 0.15
+h2Sq = ROOT.TH2D('tmpSq', ';x [fm];|#psi(x)|^{2};', 1000, x1, x2, 1000, y1, y2)
 h2Sq.SetStats(0)
 h2Sq.Draw()
 legSq = ROOT.TLegend(0.7, 0.7, 0.88, 0.88)
 for i,funs in enumerate(FunsSq):
-    col = max(1, int(10*random.random()) )
-    lsty = max(1, int(10*random.random()) )
     for fun in funs:
         fun.SetNpx(5000)
         col = Funs[i][0].GetLineColor()
@@ -213,13 +248,16 @@ for line in linesSq:
     line.SetLineStyle(2)
     line.SetLineColor(ROOT.kBlack)
     line.Draw()
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()   
 
 
 stuff.append([h2, h2Sq])
-cans = [canE, canf, canSq]
+cans = [canE, canEs, canf, canSq]
+NEs = len(Es)
 for can in cans:
-    can.Print(can.GetName() + '.png')
-    can.Print(can.GetName() + '.pdf')
+    can.Print(can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.png')
+    can.Print(can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.pdf')
 
 gApplication.Run()
