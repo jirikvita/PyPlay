@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-from ROOT import *
+import ROOT
+from ROOT import gPad, gApplication, TF1, TH1D, TCanvas
+from ROOT import kRed, kBlue, kGreen
 
 Funs = []
 Pars = [
@@ -25,32 +27,32 @@ x2 = 1
 opt=''
 for par in Pars:
 
-    print len(Funs)/nn
+    print(len(Funs)/nn)
     fun = TF1('delta1%i' % (int(par),), form[0], x1, x2)
     fun.SetParameter(0, 1.*par)
     fun.SetNpx(2000)
     #fun.SetLineColor(kBlue)
-    fun.SetLineColor(kBlue+len(Funs)/nn)
+    fun.SetLineColor(kBlue+int(len(Funs)/nn))
     #fun.Draw(opt)
     #opt='same'
     Funs.append(fun)
 
-    print len(Funs)/nn
+    print(len(Funs)/nn)
     fun = TF1('delta2%i' % (int(par),), form[1], x1, x2)
     fun.SetParameter(0, 1.*par)
     fun.SetNpx(2000)
     #fun.SetLineColor(kGreen)
-    fun.SetLineColor(kGreen+len(Funs)/nn)
+    fun.SetLineColor(kGreen+int(len(Funs)/nn))
     #fun.Draw(opt)
     Funs.append(fun)
     #opt='same'
     
-    print len(Funs)/nn
+    print(len(Funs)/nn)
     fun = TF1('delta2%i' % (int(par),), form[2], x1, x2)
     fun.SetParameter(0, 1.*par)
     fun.SetNpx(10000)
     #fun.SetLineColor(kRed)
-    fun.SetLineColor(kRed+len(Funs)/nn)
+    fun.SetLineColor(kRed+int(len(Funs)/nn))
     fun.Draw(opt)
     Funs.append(fun)
     opt='same'

@@ -161,7 +161,7 @@ def main(argv):
 
     cols = [ROOT.kBlack, ROOT.kBlue, ROOT.kGreen+2, ROOT.kRed, ROOT.kMagenta, ROOT.kCyan, ROOT.kGray]
 
-
+    doRandom = False
 
     nNodes = [ [ 10, 20, 10, 5],
                [ 10, 20, 5],
@@ -169,23 +169,26 @@ def main(argv):
                [ 10, 15, 15, 5],
                [ 10, 20, 40, 20, 5],
                [ 10, 40, 30, 20, 5],
+               [ 20, 10, 5, 2]
                ]
-    nNodes = []
-    # make random architectures:
-    nNnodes = []
-    ngen = 2 # 12
-    meannlay = 5
-    meannodes = 15
-    minnl = 3
-    minn = 5
-    for ig in range(ngen):
-        nodes = []
-        nl = max(minnl,random.poisson(meannlay))
-        for il in range(nl):
-            nn = max(minn, random.poisson(meannodes))
-            nodes.append(nn)
-        nNodes.append(nodes)
+    if doRandom:
+        nNodes = []
+        # make random architectures:
+        nNnodes = []
+        ngen = 2 # 12
+        meannlay = 5
+        meannodes = 15
+        minnl = 3
+        minn = 5
+        for ig in range(ngen):
+            nodes = []
+            nl = max(minnl,random.poisson(meannlay))
+            for il in range(nl):
+                nn = max(minn, random.poisson(meannodes))
+                nodes.append(nn)
+            nNodes.append(nodes)
 
+    # the binary tree:
     nNodes.append([-1, -1, -1, -1, -1])
     drawnns = []
     iN = -1

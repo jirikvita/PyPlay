@@ -1,9 +1,8 @@
 #!/usr/bin/python
 # Thu 17 Oct 09:24:40 CEST 2019
 
-from __future__ import print_function
-
 import ROOT
+
 from math import sqrt, pow, log, exp, pi
 import os, sys, getopt
 
@@ -130,7 +129,7 @@ def main(argv):
     time1 = 3. # fs
     tstep = (time1 - time0) / nsteps
     fun2d = MakeAndDraw2DRho('Infinite square well non-stationary #rho(x,y,t)'.format(j), X, Pars)
-    for it in xrange(0, nsteps):
+    for it in range(0, nsteps):
         ftime = time0 + it*tstep
         fun2d.SetParameter(8, ftime)
         #can.cd(it+1)

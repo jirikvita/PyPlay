@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
-from ROOT import *
+import ROOT
+from ROOT import gPad, gApplication, TF1, TH1D, TCanvas
+from ROOT import kRed, kBlue, kGreen
 
-col = [kRed, kBlue]
+col = [ROOT.kRed, ROOT.kBlue]
 
 Funs = []
 V0 = 5e-6 # in MeV, 5 eV

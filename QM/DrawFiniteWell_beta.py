@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-from ROOT import *
+import ROOT
+from ROOT import gPad, gApplication, TF1, TH1D, TH2D, TCanvas, TLine
+from ROOT import kRed, kBlue, kGreen, kBlack
+
 from math import *
 
 Funs = []
@@ -17,7 +20,7 @@ V0 = 1000 # MeV
 #V0 = 1e-4
 
 z0 = sqrt(2*m*V0)/(hc)*a
-print z0
+print(z0)
 
 zero=0
 

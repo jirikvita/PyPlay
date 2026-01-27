@@ -1,6 +1,11 @@
 #!/usr/bin/python
 
-from ROOT import *
+
+
+import ROOT
+from ROOT import gPad, gApplication, TF1, TH1D, TCanvas
+from ROOT import kRed, kBlue, kGreen
+
 from math import *
 
 Funs = []

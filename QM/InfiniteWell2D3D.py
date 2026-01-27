@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # Thu 17 Oct 09:24:40 CEST 2019
 
-from __future__ import print_function
-
 import ROOT
 from math import sqrt, pow, log, exp, pi
 import os, sys, getopt
@@ -30,7 +28,7 @@ def MakeAndDraw2DFun(name, X, N, npx = 150, npy = 150):
     return fun2d
 ##########################################
 
-def MakeAndDraw3DHist(name, X, N, Ngen =  50000, nx = 80):
+def MakeAndDraw3DHist(name, X, N, Ngen =  10000, nx = 80):
     xmin = X[0][0]
     xmax = X[0][1]
     ymin = X[1][0]
@@ -47,7 +45,9 @@ def MakeAndDraw3DHist(name, X, N, Ngen =  50000, nx = 80):
     for n in N:
         fun3d.SetParameter(i+1, n*pi / (X[i][1] - X[i][0]))
         i = i+1
-    h3 = ROOT.TH3D("h3"+name, "h3"+name, nx, xmin, xmax, ny, ymin, ymax, nz, zmin, zmax)
+    h3 = ROOT.TH3D("h3" + name + f'_{N}', "h3" + name, nx, xmin, xmax, ny, ymin, ymax, nz, zmin, zmax)
+    h3.SetMarkerColorAlpha(ROOT.kBlue, 0.1)
+    h3.SetMarkerSize(0.05)
     stuff.append(h3)
     h3.FillRandom("fun3d", Ngen)
     h3.SetStats(0)
@@ -140,9 +140,8 @@ def main(argv):
         ROOT.gPad.SetPhi(42.)
         ROOT.gPad.SetTheta(40.)
         h3 = MakeAndDraw3DHist('3d', X, N)
-        h3.SetMarkerColor(ROOT.kBlue+2)
         j = j+1
-        h3.Draw()
+        h3.Draw('P')
     for can in cans:
         can.Print(can.GetName() + '.png')
         can.Print(can.GetName() + '.pdf')

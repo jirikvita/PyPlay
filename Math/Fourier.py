@@ -72,8 +72,8 @@ can.Divide(2,2)
 funs = []
 
 for form in Forms:
-    print '--- Processing '
-    print form
+    print( '--- Processing ' )
+    print( form )
     x1=form.GetX1()
     x2=form.GetX2()
     j = Forms.index(form)
@@ -82,7 +82,7 @@ for form in Forms:
     tag=form.GetName()    
     for n in N:
         formula = form.GetFormula(1,n)
-        print formula
+        print( formula )
         name='Fourier_%s_%i' % (tag,n,)
         fun = TF1(name, formula, x1, x2)
         fun.SetNpx(2000)
