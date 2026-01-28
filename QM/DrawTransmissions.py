@@ -6,6 +6,9 @@ from ROOT import kRed, kBlue, kGreen
 
 col = [ROOT.kRed, ROOT.kBlue]
 
+
+ROOT.gStyle.SetOptTitle(0)
+
 Funs = []
 V0 = 5e-6 # in MeV, 5 eV
 mc2 = 0.511e6 # electron
@@ -24,6 +27,7 @@ opt=''
 Cans = []
 
 tag = ['FiniteWell', 'FiniteStep']
+ylabels = ['TRanbsmission over a finite well', 'TUnelling over a finite step']
 
 i = -1
 for x1,x2,form in zip(X1,X2,Forms):
@@ -38,9 +42,13 @@ for x1,x2,form in zip(X1,X2,Forms):
         ipar = ipar+1
         fun.SetParameter(ipar, 1.*par)
     fun.SetLineColor(col[i])
+    fun.GetXaxis().SetTitle("E [MeV]")
+    fun.GetYaxis().SetTitle(ylabels[i])
     fun.Draw(opt)
     #opt='same'
     Funs.append(fun)
+    ROOT.gPad.SetGridx(1)
+    ROOT.gPad.SetGridy(1)
     can.Print(can.GetName() + '.png')
     can.Print(can.GetName() + '.pdf')
   

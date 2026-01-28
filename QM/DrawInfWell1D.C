@@ -20,8 +20,18 @@ void DrawInfWell1D()
 {
 
   const int Nfits = 6;
-  const double dshift = 4.5;
+  double dshift = 4.5;
+
+  // STEERING!
+  bool zeroShift = true;
+  //bool zeroShift = false;
+  if (zeroShift)
+    dshift = 0.;
   
+
+  gStyle->SetOptTitle(0);
+
+
 
   TLine *lines[Nfits];
   TLegend *leg[Nfits];
@@ -34,15 +44,14 @@ void DrawInfWell1D()
   double x1 = 0.;
   double x2 = 1;
 
-  TH2D tmp("Infinite square well wave functions", "Infinite square well wave functions", 100, x1, x2, 1000, -2, dshift*(Nfits+1)+3);
-  tmp.GetXaxis()->SetTitle("x");
-  gStyle->SetOptTitle(0);
+  TH2D *tmp = new TH2D("Infinite square well wave functions", "Infinite square well wave functions", 100, x1, x2, 1000, -2, dshift*(Nfits+1)+3);
+  tmp -> GetXaxis()->SetTitle("x");
+  tmp -> SetStats(0);
   
   TF1 *fun[Nfits];
   TF1 *funRho[Nfits];
   TF1 *constfun[Nfits];
   int cols[] = {kBlack, kRed, kRed+2, kBlue, kBlue+2, kGreen+2};
-  tmp.SetStats(0);
 
   TString canname = "InfWell1D";
   TCanvas *can = new TCanvas(canname, canname, 0,0,1000,800);
@@ -50,11 +59,16 @@ void DrawInfWell1D()
   TCanvas *canRho = new TCanvas(canname, canname, 100,100,1000,800);
 
   can -> cd();
-  tmp.GetYaxis()->SetTitle("#psi(x)");
-  tmp.DrawCopy();
+  tmp -> GetYaxis()->SetTitle("#psi(x)");
+  tmp -> Draw();
+
+
+  TH2D *tmpRho = new TH2D("Infinite square well densities", "Infinite square well wave functions", 100, x1, x2, 1000, -0.5, dshift*(Nfits+1)+3);
+  tmpRho -> SetStats(0);
+  tmpRho -> GetXaxis()->SetTitle("x");
   canRho -> cd();
-  tmp.GetYaxis()->SetTitle("#rho(x)");
-  tmp.DrawCopy();
+  tmpRho -> GetYaxis()->SetTitle("#rho(x)");
+  tmpRho -> Draw();
   TString sameopt = "same";
   int ileg = 0;
   int Nleg = 3;
@@ -65,23 +79,34 @@ void DrawInfWell1D()
     ileg = j / Nleg;
     cout << "j=" << j << " ileg=" << ileg << endl;
     if (leg[ileg] == 0) {
-      leg[ileg] = new TLegend(0.2+0.3*ileg, 0.75, 0.5+0.3*ileg, 0.88);
+      leg[ileg] = new TLegend(0.12+0.4*ileg, 0.75, 0.5+0.4*ileg, 0.88);
       leg[ileg] -> SetBorderSize(0);
       leg[ileg] -> SetFillColor(0);
     }
     if (legRho[ileg] == 0) {
-      legRho[ileg] = new TLegend(0.2+0.3*ileg, 0.75, 0.5+0.3*ileg, 0.88);
+      legRho[ileg] = new TLegend(0.12+0.4*ileg, 0.75, 0.5+0.4*ileg, 0.88);
       legRho[ileg] -> SetBorderSize(0);
       legRho[ileg] -> SetFillColor(0);
     }
 
     double shift = dshift*i;
+    if (zeroShift)
+      shift = 0.;
     
-    fun[i] = new TF1(Form("#sqrt{2/a} sin(%i #pi x / a)", i+1), "sqrt(2/[1])*sin([0]*TMath::Pi()*x / [1]) + [2]", x1, x2);
-    fun[i] -> SetParameters(i+1, x2-x1, shift); 
-    funRho[i] = new TF1(Form("2/a sin^{2}(%i #pi x / a)", i+1), "2/[1]*(sin([0]*TMath::Pi()*x / [1]))^2 + [2]", x1, x2);
-    funRho[i] -> SetParameters(i+1, x2 - x1, shift);
+    fun[i] = new TF1(Form("#sqrt{2/a} sin(%i#pi x / a)", i+1), "sqrt(2/[1])*sin([0]*TMath::Pi()*x / [1]) + [2]", x1, x2);
+    fun[i] -> SetParameters(i+1, x2-x1, shift);
     fun[i] -> SetLineColor(cols[i]);
+    fun[i] -> SetNpx(1000);
+    double alpha = 0.2;
+    if (zeroShift) {
+      fun[i] -> SetFillColorAlpha(cols[i], alpha);
+      fun[i] -> SetFillStyle(1111);
+    }
+
+    
+    funRho[i] = new TF1(Form("2/a sin^{2}(%i#pi x / a)", i+1), "2/[1]*(sin([0]*TMath::Pi()*x / [1]))^2 + [2]", x1, x2);
+    funRho[i] -> SetParameters(i+1, x2 - x1, shift);
+    funRho[i] -> SetNpx(1000);
 
     lines[i] = new TLine(x1, shift, x2, shift);
     lines[i] -> SetLineStyle(2);
@@ -91,12 +116,23 @@ void DrawInfWell1D()
     can -> cd();
     fun[i] -> Draw(sameopt);
     lines[i] -> Draw();
-    
-    leg[ileg] -> AddEntry(fun[i], TString(fun[i]->GetName()) + Form(" + %2.1f", shift), "L");
-    legRho[ileg] -> AddEntry(funRho[i], TString(funRho[i]->GetName()) + Form(" + %2.1f", shift), "L");
+
+    TString legtag = TString(fun[i]->GetName());
+    if (!zeroShift)
+      legtag += Form(" + %2.1f", shift);
+    leg[ileg] -> AddEntry(fun[i], legtag, "L");
+    legtag =  TString(funRho[i]->GetName());
+    if (not zeroShift)
+      legtag += Form(" + %2.1f", shift);
+    legRho[ileg] -> AddEntry(funRho[i], legtag, "L");
     sameopt = "same";
 
     funRho[i] -> SetLineColor(cols[i]);
+    if (zeroShift) {
+      funRho[i] -> SetFillColorAlpha(cols[i], alpha);
+      funRho[i] -> SetFillStyle(1111);
+    }
+
     canRho -> cd();
     funRho[i] -> Draw(sameopt);
     TLine *copyline = (TLine*) lines[i] -> Clone();
@@ -111,8 +147,17 @@ void DrawInfWell1D()
       leg[i] -> Draw();
     }
   }
-  can -> Print(TString(can -> GetName()) + ".png");
-  can -> Print(TString(can -> GetName()) + ".pdf");
+
+  TString tag = "";
+  if (zeroShift)
+    tag = "_noShift";
+
+
+  TString pdfdir = "pdf/";
+  TString pngdir = "png/";
+
+  can -> Print(pngdir + TString(can -> GetName()) + tag + ".png");
+  can -> Print(pdfdir + TString(can -> GetName()) + tag + ".pdf");
 
   canRho -> cd();
   for (int i = 0; i < Nfits; ++i) {
@@ -120,7 +165,7 @@ void DrawInfWell1D()
       legRho[i] -> Draw();
     }
   }
-  canRho -> Print(TString(canRho -> GetName()) + ".png");
-  canRho -> Print(TString(canRho -> GetName()) + ".pdf");
+  canRho -> Print(pngdir + TString(canRho -> GetName()) + tag + ".png");
+  canRho -> Print(pdfdir + TString(canRho -> GetName()) + tag + ".pdf");
   
 }
