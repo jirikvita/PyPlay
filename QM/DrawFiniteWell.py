@@ -51,12 +51,12 @@ hc=197 # MeV fm
 # alpha particle:
 a=1 # fm
 m = 3700 # MeV
-V0 = 1000 # MeV
+V0 = 500 # MeV
 
 # electron
-a=1.e6 # fm
-m = 0.511 # MeV
-V0 = 1e-4 # MeV
+#a=1.e6 # fm
+#m = 0.511 # MeV
+#V0 = 1e-4 # MeV
 
 print('---------------------------------------------------')
 print('Solutions for the finite square well:')
@@ -230,7 +230,7 @@ for i,funs in enumerate(Funs):
     lsty = max(1, int(10*random.random()) )
     for fun in funs:
         fun.SetNpx(5000)
-        fun.SetLineColorAlpha(col, alpha)
+        #fun.SetLineColorAlpha(col, alpha)
         fun.SetFillColorAlpha(col, alpha)
         fun.SetFillStyle(1111)
         fun.SetLineColor(col)
@@ -259,7 +259,8 @@ for i,funs in enumerate(FunsSq):
     for fun in funs:
         fun.SetNpx(5000)
         col = Funs[i][0].GetLineColor()
-        fun.SetLineColorAlpha(col, alpha)
+        #fun.SetLineColorAlpha(col, alpha)
+        fun.SetLineColor(col)
         fun.SetFillColorAlpha(col, alpha)
         fun.SetFillStyle(1111)
         fun.Draw('same')
