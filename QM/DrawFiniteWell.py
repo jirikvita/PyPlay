@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os, sys
+
 import ROOT
 from ROOT import gPad, gApplication, TF1, TH1D, TH2D, TCanvas, TLine
 from ROOT import kRed, kBlue, kGreen, kBlack
@@ -40,37 +42,50 @@ Funs = []
 
 stuff = []
 
+pngdir = 'png/'
+pdfdir = 'pdf/'
+os.system(f'mkdir {pngdir}')
+os.system(f'mkdir {pdfdir}')
+
 hc=197 # MeV fm
 # alpha particle:
 a=1 # fm
 m = 3700 # MeV
-V0 = 500 # MeV
+V0 = 1000 # MeV
 
 # electron
-#a=1.e6 # fm
-#m = 0.511 # MeV
-#V0 = 1e-4 # MeV
+a=1.e6 # fm
+m = 0.511 # MeV
+V0 = 1e-4 # MeV
+
+print('---------------------------------------------------')
+print('Solutions for the finite square well:')
+print(f'm  = {m} MeV')
+print(f'V0 = {V0} MeV')
+print(f'a  = {a} fm')
 
 z0 = sqrt(2*m*V0)/(hc)*a
-print(z0)
+print(f'z0 = {z0:1.3f}')
 
 zero=0
 
+# pars to define tan and -cotan ;-)
 Pars = [ [1, 1, z0], [-1, -1, z0] ]
 fun1expr = '[1]*tan(x)^([0])'
+# the sqrt function
 fun2expr = 'sqrt(([0]/x)^2-1)'
 
 ymax = 20.
 nx = 100
 ny = 1000
-h2 = TH2D('Finite square well energy solutions', 'Finite square well energy solutions', nx, zero, z0, ny, 0, ymax)
+h2 = TH2D('Finite square well energy solutions', 'Finite square well energy solutions;z;', nx, zero, z0, ny, 0, ymax)
 #h2.SetOptTitle(0)
 h2.SetStats(0)
 
-canE = ROOT.TCanvas('FiniteWellEnergySolutions')
+canE = ROOT.TCanvas('FiniteWellEnergySolutions', '', 0, 0, 1200, 800)
 h2.Draw()
 
-lines = []
+pilines = []
 col = [kBlue, kGreen+3]
 
 opt='same'
@@ -102,12 +117,16 @@ for i in range(0,1+2*int(z0/pi)):
     line.SetLineStyle(2)
     line.SetLineColor(kBlack)
     line.Draw()
-    lines.append(line)
+    pilines.append(line)
 
 gPad.RedrawAxis()
+ROOT.gPad.SetGridx(1)
+ROOT.gPad.SetGridy(1)
+ROOT.gPad.Update()
+
 tag='_%i_%i_%i' % (int(a),int(1.e3*m),int(1e6*V0))
-gPad.Print('Well%s.png' % (tag,))
-gPad.Print('Well%s.pdf' %(tag,))
+#gPad.Print('png/Well%s.png' % (tag,))
+#gPad.Print('png/Well%s.pdf' %(tag,))
 stuff.append([h2, Funs, canE])
 
 
@@ -163,7 +182,7 @@ for parity in Zns:
         FunsSq.append([funLeftSq, funInSq, funRightSq])
 
 ################################################
-canEs = ROOT.TCanvas('FiniteWellEnergies', '', 300, 3000, 1200, 800)
+canEs = ROOT.TCanvas('FiniteWellEnergies', '', 0, 0, 1200, 800)
 canEs.cd()
 potential = ROOT.TF1('fpot', ' 0. - (x>-[0])*(x<[0])*[1]', x1, x2)
 potential.SetLineColor(ROOT.kBlue)
@@ -200,6 +219,7 @@ leg = ROOT.TLegend(0.7, 0.7, 0.88, 0.88)
 cols = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen+2, ROOT.kCyan,
         ROOT.kMagenta, ROOT.kTeal+10, ROOT.kOrange-3,
         ROOT.kViolet, ROOT.kOrange, ROOT.kPink+10]
+alpha = 0.15
 for i,funs in enumerate(Funs):
     #col = max(1, int(10*random.random()) )
     col = -1
@@ -210,6 +230,9 @@ for i,funs in enumerate(Funs):
     lsty = max(1, int(10*random.random()) )
     for fun in funs:
         fun.SetNpx(5000)
+        fun.SetLineColorAlpha(col, alpha)
+        fun.SetFillColorAlpha(col, alpha)
+        fun.SetFillStyle(1111)
         fun.SetLineColor(col)
         #fun.SetLineStyle(lsty)
         fun.Draw('same')
@@ -227,8 +250,7 @@ ROOT.gPad.Update()
 ################################################
 canSq = ROOT.TCanvas('FiniteWellDensities', '', 0, 0, 1600, 800)
 canSq.cd()
-y1, y2 = 0, 1.2
-alpha = 0.15
+y1, y2 = -0.2, 1.2
 h2Sq = ROOT.TH2D('tmpSq', ';x [fm];|#psi(x)|^{2};', 1000, x1, x2, 1000, y1, y2)
 h2Sq.SetStats(0)
 h2Sq.Draw()
@@ -257,7 +279,8 @@ stuff.append([h2, h2Sq])
 cans = [canE, canEs, canf, canSq]
 NEs = len(Es)
 for can in cans:
-    can.Print(can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.png')
-    can.Print(can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.pdf')
+    can.Print(pngdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.png')
+    can.Print(pdfdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.pdf')
 
+print('DONE!')
 gApplication.Run()
