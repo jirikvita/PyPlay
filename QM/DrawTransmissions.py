@@ -27,7 +27,7 @@ opt=''
 Cans = []
 
 tag = ['FiniteWell', 'FiniteStep']
-ylabels = ['TRanbsmission over a finite well', 'TUnelling over a finite step']
+ylabels = ['Transmission over a finite well', 'Tunelling over a finite step']
 
 i = -1
 for x1,x2,form in zip(X1,X2,Forms):
