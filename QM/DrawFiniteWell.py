@@ -9,6 +9,8 @@ from ROOT import kRed, kBlue, kGreen, kBlack
 from math import sqrt, pow, pi, exp, log
 import random
 
+#############################################
+
 def GetEqualPoints(f1, f2):
     x1 = f1.GetXaxis().GetXmin()
     x2 = f1.GetXaxis().GetXmax()
@@ -36,7 +38,8 @@ def GetEqualPoints(f1, f2):
         oldsigne = 1.* signe
             
     return zns
-                   
+
+#############################################
     
 Funs = []
 
@@ -51,7 +54,12 @@ hc=197 # MeV fm
 # alpha particle:
 a=1 # fm
 m = 3700 # MeV
-V0 = 500 # MeV
+V0 = 200 # MeV
+
+
+# STEERING
+zeroShift = True
+#zeroShift = False
 
 # electron
 #a=1.e6 # fm
@@ -135,51 +143,66 @@ print(f'OK, found {len(zns_even)} even solutions')
 zns_odd = GetEqualPoints(fun2, Funs[1])
 print(f'OK, found {len(zns_odd)} odd solutions')
 Zns = { 1: zns_even, -1: zns_odd}
-
 Es = []
+results = {}
+for parity in Zns:
+    zns = Zns[parity]
+    for zn in zns:
+        # the energy quantization formula:
+        E = pow(zn*hc, 2) / (2*m*a*a) - V0
+        Es.append(E)
+        results[E] = [zn, parity]
+print(results)
 # a triplet of functions left, in and right of the finite well
-Funs = []
-FunsSq = []
+# wave function and the probabilit density
+Funs = {}
+FunsSq = {}
 
-sf = 1.75
+sf = 2. #1.75
 x1 = -sf*a
 x2 = -1.*x1
 
-for parity in Zns:
-    zns = Zns[parity]
-    for iz, zn in enumerate(zns):
-        E = pow(zn*hc, 2) / (2*m*a*a) - V0
+shiftSF = 2.5
+ifun = -1
+iz = -1
+for E,result in results.items():
+        zn = result[0]
+        parity = result[1]
+        iz += 1
+        ifun += 1
         print(f'zn={zn:1.3f} E={E}')
         kappa = sqrt(-2*m*E) / hc
         k = sqrt(2*m*(V0 + E)) / hc
-        Es.append(E)
-
         
         # amplitude inside:
         D = 1.
         fform = '[0]*cos([1]*x)'
         if parity < 0:
             fform = '[0]*sin([1]*x)'
-            
-        funIn = TF1(f'fun_in_{iz}', fform, -a, a)
+
+        constFun = ''
+        if not zeroShift:
+            constFun = ' + [2]'
+        funIn = TF1(f'fun_in_{iz}', fform + constFun, -a, a)
         funIn.SetParameters(D, k)#, a)
 
         # amplitude outside:
         F = D*funIn.Eval(a) * exp(kappa*a)
-        funLeft = TF1(f'fun_left_{iz}', '[0]*exp([1]*x)', x1, -a)
+        funLeft = TF1(f'fun_left_{iz}', '[0]*exp([1]*x)' + constFun, x1, -a)
         funLeft.SetParameters(parity*F, kappa)
-        funRight = TF1(f'fun_right_{iz}', '[0]*exp(-[1]*x)', a, x2)
+        funRight = TF1(f'fun_right_{iz}', '[0]*exp(-[1]*x)' + constFun, a, x2)
         funRight.SetParameters(F, kappa)
-        Funs.append([funLeft, funIn, funRight])
+        Funs[E] = [funLeft, funIn, funRight]
 
         # probability densities: (squared functions)
-        funInSq = TF1(f'funsq_in_{iz}', '(' + fform + ')^2', -a, a)
+        funInSq = TF1(f'funsq_in_{iz}', '(' + fform + ')^2' + constFun, -a, a)
         funInSq.SetParameters(D, k)#, a)
-        funLeftSq = TF1(f'funsq_left_{iz}', '([0]*exp([1]*x))^2', x1, -a)
+        funLeftSq = TF1(f'funsq_left_{iz}', '([0]*exp([1]*x))^2' + constFun, x1, -a)
         funLeftSq.SetParameters(parity*F, kappa)
-        funRightSq = TF1(f'funsq_right_{iz}', '([0]*exp(-[1]*x))^2', a, x2)
+        funRightSq = TF1(f'funsq_right_{iz}', '([0]*exp(-[1]*x))^2' + constFun, a, x2)
         funRightSq.SetParameters(F, kappa)
-        FunsSq.append([funLeftSq, funInSq, funRightSq])
+        FunsSq[E] = [funLeftSq, funInSq, funRightSq]
+    
 
 ################################################
 canEs = ROOT.TCanvas('FiniteWellEnergies', '', 0, 0, 1200, 800)
@@ -194,6 +217,10 @@ hpot.SetStats(0)
 hpot.Draw()
 potential.Draw('same')
 elines = []
+# sort the energies!
+Es.sort()
+print('Energies:')
+print(Es)
 for E in Es:
     line = ROOT.TLine(-a, E, a, E)
     line.SetLineWidth(2)
@@ -206,12 +233,15 @@ ROOT.gPad.SetGridx(1)
 ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()
 
-
-
+drawShiftSF = 0.
+if not zeroShift:
+    drawShiftSF = 1.*shiftSF
 ################################################
-canf = ROOT.TCanvas('FiniteWellFunctions', '', 0, 0, 1600, 800)
+canf = ROOT.TCanvas('FiniteWellFunctions', '', 0, 0, 1200, 1200)
 canf.cd()
-y1, y2 = -2, 2
+y1, y2 = -0.2, 2 + drawShiftSF*(len(Es)-1)
+if zeroShift:
+    y1 = -2
 h2 = ROOT.TH2D('tmp', ';x [fm];#psi(x);', 1000, x1, x2, 1000, y1, y2)
 h2.SetStats(0)
 h2.Draw()
@@ -220,7 +250,15 @@ cols = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen+2, ROOT.kCyan,
         ROOT.kMagenta, ROOT.kTeal+10, ROOT.kOrange-3,
         ROOT.kViolet, ROOT.kOrange, ROOT.kPink+10]
 alpha = 0.15
-for i,funs in enumerate(Funs):
+
+hlines = {}
+for i,E in enumerate(Es):
+    print(f' ...E={E}')
+    funs = Funs[E]
+    shift = i*shiftSF
+    if not zeroShift:
+        hlines[E] = ROOT.TLine(x1, shift, x2, shift)
+
     #col = max(1, int(10*random.random()) )
     col = -1
     if i < len(cols):
@@ -230,12 +268,18 @@ for i,funs in enumerate(Funs):
     lsty = max(1, int(10*random.random()) )
     for fun in funs:
         fun.SetNpx(5000)
-        #fun.SetLineColorAlpha(col, alpha)
-        fun.SetFillColorAlpha(col, alpha)
-        fun.SetFillStyle(1111)
+        if zeroShift:
+            fun.SetFillColorAlpha(col, alpha)
+            fun.SetFillStyle(1111)
+        else:
+            fun.SetParameter(2,shift)
         fun.SetLineColor(col)
         #fun.SetLineStyle(lsty)
         fun.Draw('same')
+    if E in hlines:
+        hlines[E].SetLineColor(col)
+        hlines[E].Draw()
+
     leg.AddEntry(funs[1], funs[1].GetName(), 'PL')
 #leg.Draw()
 lines = [ ROOT.TLine(-a, y1, -a, y2), ROOT.TLine(a, y1, a, y2)]
@@ -248,22 +292,32 @@ ROOT.gPad.SetGridy(1)
 ROOT.gPad.Update()
 
 ################################################
-canSq = ROOT.TCanvas('FiniteWellDensities', '', 0, 0, 1600, 800)
+canSq = ROOT.TCanvas('FiniteWellDensities', '', 0, 0, 1200, 1200)
 canSq.cd()
-y1, y2 = -0.2, 1.2
+y1, y2 = -0.2, 1.2 + drawShiftSF*(len(Es) -1 + 0.2)
 h2Sq = ROOT.TH2D('tmpSq', ';x [fm];|#psi(x)|^{2};', 1000, x1, x2, 1000, y1, y2)
 h2Sq.SetStats(0)
 h2Sq.Draw()
 legSq = ROOT.TLegend(0.7, 0.7, 0.88, 0.88)
-for i,funs in enumerate(FunsSq):
+for i,E in enumerate(Es):
+    print(f' ...E={E}')
+    funs = FunsSq[E]
+    shift = i*shiftSF
     for fun in funs:
         fun.SetNpx(5000)
-        col = Funs[i][0].GetLineColor()
+        col = Funs[E][0].GetLineColor()
         #fun.SetLineColorAlpha(col, alpha)
         fun.SetLineColor(col)
-        fun.SetFillColorAlpha(col, alpha)
-        fun.SetFillStyle(1111)
+        if zeroShift:
+            fun.SetFillColorAlpha(col, alpha)
+            fun.SetFillStyle(1111)
+        else:
+            fun.SetParameter(2,shift)
         fun.Draw('same')
+    if E in hlines:
+        hlines[E].SetLineColor(col)
+        hlines[E].Draw()
+
     legSq.AddEntry(funs[1], funs[1].GetName(), 'PL')
 #legSq.Draw()
 linesSq = [ ROOT.TLine(-a, y1, -a, y2), ROOT.TLine(a, y1, a, y2)]
@@ -279,9 +333,12 @@ ROOT.gPad.Update()
 stuff.append([h2, h2Sq])
 cans = [canE, canEs, canf, canSq]
 NEs = len(Es)
+tag = ''
+if zeroShift:
+    tag = '_noShift'
 for can in cans:
-    can.Print(pngdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.png')
-    can.Print(pdfdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions.pdf')
+    can.Print(pngdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions{tag}.png')
+    can.Print(pdfdir + can.GetName() + f'_V0_{V0}MeV_{NEs}_solutions{tag}.pdf')
 
 print('DONE!')
 gApplication.Run()
