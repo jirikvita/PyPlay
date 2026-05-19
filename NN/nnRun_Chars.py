@@ -2,22 +2,31 @@
 # jiri kvita
 # Tue 12 Oct 14:32:31 CEST 2021
 # devel: Nov 2021, Apr 2023
+# AI co-devel May 2026
 
 from math import sqrt, pow, log, exp, fabs
-import os, sys, getopt
+import os, sys
+import gc
+from pathlib import Path
+import shutil
+import numpy as np
+import matplotlib.pyplot as plt
 
-# theano
-# https://www.analyticsvidhya.com/blog/2016/04/neural-networks-python-theano/
-import theano
-import theano.tensor as T
-from theano.ifelse import ifelse
-from theano import function
+# Keep Aesara import robust on systems without configured BLAS linker flags.
+os.environ.setdefault('AESARA_FLAGS', 'blas__ldflags=')
+
+# Aesara (Theano successor)
+import aesara
+import aesara.tensor as T
+import aesara.tensor.nnet as nnet
+from aesara import function, shared
 from random import random
 from random import uniform
 
 # JK
-from readTools import *
-from printAndPlotTools import *
+from argvTools import parse_argv
+from readTools import ReadData
+from printAndPlotTools import PrintUnique, PlotWs, PlotCost, PlotDataAsHisto, PlotIndivDataAsHisto
 
 stuff = []
 
@@ -38,58 +47,36 @@ def main(argv):
     # for reading test data
     # STEERING: 
     # test set size!
-    ntested = 400 # 1000
+    # images range ids i1..i2
+    
+
+    default_settings = {
+        'ntested': 4000,
+        'nIters': 200,
+        'inputn1': 80,
+        'inputn2': 40,
+        'batch_size': 64,
+        'gBatch': False,
+        'gTag': '',
+        'dataPath': os.environ.get('NN_DATA_PATH', 'data/by_class'),
+    }
+
+    settings = parse_argv(argv, default_settings)
+    ntested = settings['ntested']
+    nIters = settings['nIters']
+    inputn1 = settings['inputn1']
+    inputn2 = settings['inputn2']
+    batch_size = settings['batch_size']
+    gBatch = settings['gBatch']
+    gTag = settings['gTag']
+    dataPath = settings['dataPath']
+
     i1 = 0
     i2 = i1 + ntested
-    nIters = 200 # DEFAULT: 1000, 5000, 8000   
-    # STEERING of the NN dimensions / architecture!
-    inputn1 = 8
-    inputn2 = 8
 
-    # not controllable frtom cmd yet
+    # not controllable from cmd yet
     # Learning STEERING!
     learning_rate = 0.005 # 0.005 # 0.005
-    
-    gBatch = False
-    gTag=''
-    
-    print(argv[1:])
-    try:
-        # options that require an argument should be followed by a colon (:).
-        opts, args = getopt.getopt(argv[1:], 'hbt:i:n:k:m:', ['help', 'batch', 'tag=', 'iters=', 'nimgs=', 'klayers=', 'mlayers='])
-
-        print('Got options:')
-        print(opts)
-        print(args)
-    except getopt.GetoptError:
-        print('Parsing...')
-        print ('Command line argument error!')
-        print('{:} [ -h -b --batch -tTag --tag="MyCoolTag"]]'.format(argv[0]))
-        sys.exit(2)
-    print('Opts:')
-    print(opts)
-    for opt,arg in opts:
-        print('Processing command line option {} {}'.format(opt,arg))
-        if opt in ("-h", "--help"):
-            print('Usage: {:} [ -h -b --batch -t/--tag="MyCoolTag  -i/--iters=[] -n/--nimgs=[] -k/--klayers=[] -,/--mlayers=[] "]'.format(argv[0]))
-            sys.exit()
-        elif opt in ("-b", "--batch"):
-            gBatch = True
-        elif opt in ("-t", "--tag"):
-            gTag = arg
-            print('OK, using user-defined histograms tag for output pngs {:}'.format(gTag,) )
-        elif opt in ("-i", "--iters"):
-            nIters = int(arg)
-            print(f'OK, using user-defined number of iterations {nIters:}')
-        elif opt in ("-n", "--nimgs"):
-            ntested = int(arg)
-            print(f'OK, using user-defined number of images to train on as {ntested:}')
-        elif opt in ("-k", "--klayers"):
-            inputn1 = int(arg)
-            print(f'OK, using user-defined numbers in 1st hidden layer {inputn1:}')
-        elif opt in ("-m", "--mlayers"):
-            inputn2 = int(arg)
-            print(f'OK, using user-defined numbers in 1st hidden layer {inputn2:}')
   
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
@@ -100,6 +87,8 @@ def main(argv):
     print(f'ntested: {ntested:}')
     print(f'inputn1: {inputn1:}')
     print(f'inputn2: {inputn2:}')
+    print(f'batch_size: {batch_size:}')
+    print(f'dataPath: {dataPath}')
 
     # HACK!
     #return
@@ -112,21 +101,13 @@ def main(argv):
 
     Ns = [inputn1, inputn2, 1]
     
-     # images range ids i1..i2
-    # DEFAULT:
-    #i1, i2 = 70, 460
-    #i1, i2 = 200, 2200
-    #i1, i2 = 200, 1200
-    
-    #i1, i2 = 70, 360
-    #i1, i2 = 70, 210
-    #i1, i2 = 70, 80
-    #i1, i2 = 10, 10
-    
-    hexcodes = ['30', # 0 
-                '31', # 1
-                '32', # 2
-                #'33', # 3
+    # STEERING WHAT CHARACTERS TO TRAIN ON! 
+    hexcodes = [ #'30', '62', '41'
+        
+        
+        '31', # 1
+        '32', # 2
+        '33', # 3
                 #'34', # 4
                 #'35', # 5
                 #'36', # 6
@@ -135,11 +116,12 @@ def main(argv):
                 #'39', # 9
                 #'5a', # z
     ]
-
+    print('Will train on characters with hex codes: {}'.format(hexcodes))
+    
     ##################################################
     #           Step 1: Define variables             #
     ##################################################
-    #x = theano.tensor.fvector('x')
+    #x = aesara.tensor.fvector('x')
     x = T.matrix('x')
 
     # crop cutoff factor rebinned data:
@@ -151,7 +133,7 @@ def main(argv):
     baseDimy = int(128  / rebiny) - 2*cutoffy
     #fullDIM = baseDimx*baseDimy # hack
     DIM = baseDimx*baseDimy # hack
-    print('Got image dimension {}'.format(DIM))
+    print('*** Got image dimension base {}x{} = {}'.format(baseDimx, baseDimy, DIM))
     # lin dim for linearized img matrix
 
     # TODO: redesign the neurons structure so that the number of output neurons same as number of classes?
@@ -176,19 +158,23 @@ def main(argv):
     n1 = Ns[0]
     n2 = Ns[1]
     n3 = Ns[2]
-
+    print(f'*** Will train on a NN with {n0} input neurons, {n1} neurons in 1st hidden layer, {n2} neurons in 2nd hidden layer, and {n3} output neurons.')
+    nTotal = n0*n1 + n1*n2 + n2*n3
+    print(f'*** Total number of weights (parameters) in the model: {nTotal}')
     trainChars = 'train_'
     for code in hexcodes:
         trainChars =  trainChars + code
         if code != hexcodes[-1]:
             trainChars = trainChars + '_'
     
-    setupTag = f'_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
+    # Include optional user tag in output naming so CLI tags affect produced artifacts.
+    user_tag = f'_tag_{gTag}' if gTag else ''
+    setupTag = f'{user_tag}_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
     print(f'Train tag: {setupTag}')
     
-    print('*** defining first NN layer ***')
+    print('...defining first NN layer...')
     ilayer = 0
-    bs.append( theano.shared(1.*b0) )
+    bs.append( shared(1.*b0) )
     ws.append([])
     aas.append([])
 
@@ -199,7 +185,7 @@ def main(argv):
     
     for i in range(0,n1):
         # was: random()
-        ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(wmin, wmax) for j in range(0,n0) ])) )
+        ws[ilayer].append( shared(np.array([ randDamp*uniform(wmin, wmax) for j in range(0,n0) ])) )
 
     ##################################################
     # Step 2: Define mathematical expression         #
@@ -211,37 +197,37 @@ def main(argv):
             aas[ilayer].append( 1/(1+expAmplif*T.exp(-T.dot(x,ws[-1][i])-bs[-1])) )
         else:
             # ReLu:
-            aas[ilayer].append( T.nnet.relu(T.dot(x,ws[-1][i])-bs[-1]) )
+            aas[ilayer].append( nnet.relu(T.dot(x,ws[-1][i])-bs[-1]) )
     # due to algebraic purposes, T.stack needs a list as input
     stacked_aas.append(T.stack(aas[-1],axis=1))
-    print('*** defined first NN layer of {} neurons ***'.format(len(aas[-1])))
+    print('   ...defined first NN layer of {} neurons...'.format(len(aas[-1])))
     #print(aas[-1])
 
-    print('*** defining second NN layer ***')
+    print('...defining second NN layer...')
     ilayer = 1
-    bs.append( theano.shared(1.*b0) )
+    bs.append( shared(1.*b0) )
     ws.append([])
     aas.append([])
     for i in range(0, n2):
-        ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n1) ])) )
+        ws[ilayer].append( shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n1) ])) )
     for i in range(0,n2):
         if not useReLu:
             # sigmoid
             aas[ilayer].append ( 1/(1+expAmplif*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
         else:
             # ReLu:
-            aas[ilayer].append ( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
+            aas[ilayer].append ( nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
     stacked_aas.append(T.stack(aas[-1],axis=1))
-    print('*** defined second layer of {} neurons ***'.format(len(aas[-1])))
+    print('   ...defined second layer of {} neurons...'.format(len(aas[-1])))
     #print(aas[-1])
 
-    print('*** defining last single layer ***')
+    print('...defining last single layer...')
     ilayer = 2
-    bs.append( theano.shared(1.*b0) )
+    bs.append( shared(1.*b0) )
     ws.append([])
     aas.append([])
     for i in range(0, n3):
-        ws[ilayer].append( theano.shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n2) ])) )
+        ws[ilayer].append( shared(np.array([ randDamp*uniform(-1., 1.) for j in range(0,n2) ])) )
     for i in range(0, n3):
         # if not useReLu:
         # LAST MUST BE SIGMOID!
@@ -249,12 +235,12 @@ def main(argv):
         aas[ilayer].append( 1/(1+expAmplif*T.exp(-T.dot(stacked_aas[-1],ws[-1][i])-bs[-1])) )
         # else:
         # ReLu:
-        #    aas[ilayer].append( T.nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
-    print('*** defined last layer of {} neurons ***'.format(len(aas[-1])))
+        #    aas[ilayer].append( nnet.relu(T.dot(stacked_aas[-1],ws[-1][i])-bs[-1]) )
+    print('   ...defined last layer of {} neurons...'.format(len(aas[-1])))
     # no need to stack;)
 
     # print random weights
-    print('*** printing the random initial weights ***')
+    print('...printing the random initial weights...')
     #PrintWs(ws)
     #PrintBs(bs)
     PlotWs(ws, '_pre' + setupTag)
@@ -277,8 +263,14 @@ def main(argv):
     # Also known as Bernoulli negative log-likelihood and Binary Cross-Entropy
     # c.f. https://stats.stackexchange.com/questions/154879/a-list-of-cost-functions-used-in-neural-networks-alongside-applications
     #cost = -(a_hat*T.log(aas[-1][-1]) + (1.-a_hat)*T.log(1.-aas[-1][-1])).sum()
-    # JK's chi2-like expression:
-    cost = T.power(a_hat - aas[-1][-1], 2).sum()
+    # JK's chi2-like expression with finite guards to prevent NaN propagation.
+    eps = 1e-8
+    y_raw = aas[-1][-1]
+    y_safe = T.switch(T.isnan(y_raw) | T.isinf(y_raw), 0.5, y_raw)
+    y_safe = T.clip(y_safe, eps, 1. - eps)
+    a_hat_safe = T.switch(T.isnan(a_hat) | T.isinf(a_hat), 0.5, a_hat)
+    a_hat_safe = T.clip(a_hat_safe, eps, 1. - eps)
+    cost = T.power(a_hat_safe - y_safe, 2).sum()
 
     # gradiends of weights:
     print('--- weight gradients ---')
@@ -289,7 +281,10 @@ def main(argv):
         print('  {}/{}'.format(i,ng))
         dws.append([])
         for j in range(0, len(ws[i])):
-            dws[-1].append( T.grad(cost, ws[i][j]) )
+            grad_w = T.grad(cost, ws[i][j])
+            # Replace non-finite gradients with zeros to avoid corrupting weights.
+            grad_w = T.switch(T.isnan(grad_w) | T.isinf(grad_w), T.zeros_like(grad_w), grad_w)
+            dws[-1].append(grad_w)
 
     # gradiends of constant terms:
     print('--- const. terms gradients ---')
@@ -298,7 +293,9 @@ def main(argv):
     print('# of b\'s to go through: {}'.format(ng))
     for i in range(0, ng):
         print('  {}/{}'.format(i,ng))
-        dbs.append( T.grad(cost, bs[i]) )
+        grad_b = T.grad(cost, bs[i])
+        grad_b = T.switch(T.isnan(grad_b) | T.isinf(grad_b), T.zeros_like(grad_b), grad_b)
+        dbs.append(grad_b)
         
     locupdates = [] # for training
     ng = len(ws)
@@ -320,6 +317,11 @@ def main(argv):
     )
     print('+++ defining the testing function  +++')
     predict = function(
+        inputs = [x],
+        outputs = aas[-1][-1]
+    )
+    # Keep a separate evaluator to compute loss on test sets when labels are available.
+    evaluate = function(
         inputs = [x,a_hat],
         outputs = [aas[-1][-1],cost]
     )
@@ -329,7 +331,22 @@ def main(argv):
     #      Step 4: read the input data (images)      #
     ##################################################
     print('+++ reading images +++')
-    inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx)
+    # Preflight check to fail early with actionable guidance when dataset is missing.
+    if not Path(dataPath).exists():
+        print('ERROR: dataset path does not exist: {}'.format(dataPath))
+        print('Hint: set --datapath=/path/to/by_class or export NN_DATA_PATH=/path/to/by_class')
+        print('Expected layout: <dataPath>/<hex>/train_<hex>/train_<hex>_0000.png')
+        return
+
+    missing_classes = [hexcode for hexcode in hexcodes if not Path(dataPath, hexcode).exists()]
+    if missing_classes:
+        print('ERROR: dataset path is missing class directories: {}'.format(missing_classes))
+        print('Hint: verify that your by_class dataset contains all requested hex class IDs.')
+        return
+
+    inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, dataPath=dataPath)
+    inputs = np.asarray(inputs, dtype=np.float64)
+    outputs = np.asarray(outputs, dtype=np.float64)
     #print('Outputs: ', outputs)
     print('*** Train outputs:')
     PrintUnique(outputs)
@@ -342,6 +359,15 @@ def main(argv):
     
     #Iterate through all inputs and find outputs:
     print('+++ Training: Iterating through inputs, finding outputs...{} times +++'.format(i2-i1))
+    # Normalize by the actual number of loaded training samples, not per-class image count.
+    n_train = len(inputs)
+    if n_train == 0:
+        print('ERROR: no training data loaded, stopping.')
+        return
+    if batch_size <= 0:
+        print('ERROR: batch_size must be > 0, stopping.')
+        return
+    batch_size = min(batch_size, n_train)
     cost = []
     normcost = []
     
@@ -349,9 +375,22 @@ def main(argv):
         ###################################################
         #                   TRAINING                      #
         ###################################################
-        pred, cost_iter = train(inputs, outputs)
-        normcost_iter = cost_iter / ntested
-        if iteration % 50 == 0 or iteration == 1:
+        perm = np.random.permutation(n_train)
+        cost_iter = 0.
+        pred = None
+        for ibeg in range(0, n_train, batch_size):
+            iend = min(ibeg + batch_size, n_train)
+            idx = perm[ibeg:iend]
+            batch_x = inputs[idx]
+            batch_y = outputs[idx]
+            pred, cost_batch = train(batch_x, batch_y)
+            # Stop immediately when non-finite values appear to prevent NaN feedback loops.
+            if (not np.isfinite(cost_batch)) or (not np.all(np.isfinite(pred))):
+                print(f'ERROR: non-finite value detected at iteration {iteration}. Stopping training early.')
+                return
+            cost_iter = cost_iter + float(cost_batch)
+        normcost_iter = cost_iter / float(n_train)
+        if iteration % 10 == 0 or iteration <= 10:
             print('Trainig iteration {}/{}, cost: {:4.2f} cost/Nimgs: {:1.4f}'.format(iteration, nIters, cost_iter, normcost_iter))
         cost.append(cost_iter)
         normcost.append(normcost_iter)
@@ -365,7 +404,8 @@ def main(argv):
     Asimov_results = []
     Asimov_resultsDict = {}
     print('+++ The Asimov outputs of the NN are: +++')
-    # printing last prediction pred
+    # Re-evaluate full training set after mini-batch updates.
+    pred = predict(inputs)
     classesPrinted = {}
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
@@ -388,6 +428,10 @@ def main(argv):
     #PrintBs(bs)
     PlotWs(ws, '_post' + setupTag)   
 
+    # Free large training-phase containers before loading test data.
+    del inputs, outputs, pred, Asimov_results, Asimov_resultsDict, classesPrinted, cost, normcost
+    gc.collect()
+
     
     ##################################################
     #           Step 7: test on new inputs!          #
@@ -395,7 +439,7 @@ def main(argv):
 
     i1 = 1*i2
     i2 = i1 + ntested # 500+i2
-    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1)
+    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1, dataPath)
     print('*** Test outputs:')
     PrintUnique(test_outputs)
     test_results = []
@@ -403,13 +447,24 @@ def main(argv):
     # create also NN output histograms for individual characters
     test_resultsDict = {}
     
-    test_pred, test_cost = predict(test_inputs, test_outputs)
+    test_pred, test_cost = evaluate(test_inputs, test_outputs)
     NcorrectDict = {}
     NallDict = {}
     nAll = 0
     nCorrect = 0
     # window half-width to judge correct result on the train set
     correctCut = 0.10
+
+    # Map scalar target values back to class IDs so per-class stats are label-driven.
+    nhex = len(hexcodes)
+    nnoutmax = 1.
+    nnoutmin = 0.
+    delta = 0.1
+    sep = (nnoutmax - nnoutmin) / nhex
+    value_to_hex = {}
+    for ihex, hexcode in enumerate(hexcodes):
+        class_value = nnoutmin + ihex*sep + delta
+        value_to_hex[class_value] = hexcode
     
     for i in range(len(test_inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
@@ -417,8 +472,8 @@ def main(argv):
         diff = test_outputs[i] - test_pred[i]
         # print(NallDict)
         nAll = nAll + 1
-        #key = test_outputs[i]
-        key = hexcodes[i % len(hexcodes)]
+        # Use the nearest encoded target value to avoid fragile assumptions about sample ordering.
+        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - test_outputs[i]))[1]
         if not key in NallDict:
             NallDict[key] = 1
             NcorrectDict[key] = 0
@@ -443,7 +498,9 @@ def main(argv):
         frac.append(fracDict[key])
         print('Fraction of correct classification for class {} is {}'.format(key, fracDict[key]))
     print(fracDict)
-    print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ))
+    # Guard against empty test input to avoid division by zero.
+    total_frac = (nCorrect / float(nAll)) if nAll else 0.
+    print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, total_frac ))
 
     PlotDataAsHisto(test_results, 'test_results', setupTag)
     PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
@@ -458,15 +515,18 @@ def main(argv):
     for key,frac in fracDict.items():
         outfile.write(f'{key} : {frac:1.3f}\n')
     outfile.write(f'Sum : {sumfrac:1.3f}\n')
-    outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, nCorrect / (1.* nAll) ) + '\n')
+    outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, total_frac ) + '\n')
     outfile.close()
     
     if not gBatch:
         plt.show()
 
-    # move all results to a subdirectory
-    os.system(f'mkdir results{setupTag}')
-    os.system(f'mv *{setupTag}*.* results{setupTag}/')
+    # Move generated artifacts safely with Python APIs instead of shell commands.
+    results_dir = Path(f'results{setupTag}')
+    results_dir.mkdir(exist_ok=True)
+    for artifact in Path('.').glob(f'*{setupTag}*.*'):
+        if artifact.is_file():
+            shutil.move(str(artifact), str(results_dir / artifact.name))
     
     return
 

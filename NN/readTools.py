@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 from PIL import Image
+import os
+import sys
 
 import numpy as np
 from math import log10
@@ -83,83 +85,82 @@ def readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny, thr = 0.5):
     # example full name: 'data/by_class/6e/train_6e/train_6e_04507.png'
     
     # 128x128 pixels
-    image = Image.open('{}/{}/train_{}/train_{}_{}.png'.format(path, hexcode, hexcode, hexcode, imgid))
-    image_array_orig = np.array(image)
-    image_array = image_array_orig 
+    image_path = os.path.join(path, hexcode, f'train_{hexcode}', f'train_{hexcode}_{imgid}.png')
+    image = Image.open(image_path)
+    image_array_orig = np.asarray(image)
+    image_array = image_array_orig
     
     if rebinx > 0 and rebiny > 0:
         image_array = Rebin2DRGBArray(image_array_orig , rebinx, rebiny)
     
-    nLines = len(image_array)
-    
-    # bw and inverted image;-)
-    image_bw = []  #np.zeros(nLines*nLines)
-    
-    #print('Lines: {}'.format(nLines))
+    nLines = image_array.shape[0]
+    nCols = image_array.shape[1]
 
-    iline = -1
-    for line in image_array:
-        iline = iline + 1
-        if iline < cutoffy or iline >= nLines - cutoffy:
-            continue
-        #print(line)
-        icol = -1
-        nCols = len(line)
-        for x in line:
-            icol = icol + 1
-            if icol < cutoffx or icol >= nCols - cutoffx:
-                continue
-            r,g,b = x[0], x[1], x[2]
-            #print('r={} g={} b={}'.format(r,g,b))
-            if r <= thr and g <= thr and b <= thr:
-                #print('...found black dot {} column {}'.format(iline, icol))
-                #image_bw[iline*nLines + icol] = 1
-                #image_bw.append(3. - r - g - b)
-                image_bw.append(1.)
-            else:
-                image_bw.append(0)
+    # Fast vectorized crop + threshold + flatten to 1D list.
+    cropped = image_array[cutoffy:nLines-cutoffy, cutoffx:nCols-cutoffx]
+    if cropped.size == 0:
+        return []
 
-    return image_bw
+    if cropped.ndim == 2:
+        mask = cropped <= thr
+    else:
+        mask = np.logical_and.reduce((cropped[:, :, 0] <= thr, cropped[:, :, 1] <= thr, cropped[:, :, 2] <= thr))
+
+    return mask.astype(np.float64).ravel().tolist()
 
 ########################################################################################
 def Rebin2DRGBArray(data, rebinx = 2, rebiny = 2, doAver = True):
-    newdata = []
-    # todo: check dimension on each line and divisibility by rebin factors?
-    for i in range(0, int(len(data)/rebinx)):
-        line = []
-        for j in range(0, int(len(data[0])/rebiny)):
-            # loop over rgb:
-            vals = []
-            ncols = len(data[0][0])
-            for icol in range(0,ncols):
-                val = 0.
-                n = 0
-                for ii in range(0,rebinx):
-                    for jj in range(0,rebiny):
-                        val = val + data[i*rebinx+ii][j*rebiny+jj][icol]
-                        n = n+1
-                if doAver:
-                    vals.append(val/(1.*n))
-                else:
-                    vals.append(val)
-            line.append(vals)
-        newdata.append(line)
-    return newdata
+    arr = np.asarray(data)
+    if rebinx <= 0 or rebiny <= 0:
+        return arr
+
+    h = (arr.shape[0] // rebinx) * rebinx
+    w = (arr.shape[1] // rebiny) * rebiny
+    if h == 0 or w == 0:
+        return arr
+
+    arr = arr[:h, :w]
+    if arr.ndim == 2:
+        reshaped = arr.reshape(h // rebinx, rebinx, w // rebiny, rebiny)
+        if doAver:
+            return reshaped.mean(axis=(1, 3))
+        return reshaped.sum(axis=(1, 3))
+
+    reshaped = arr.reshape(h // rebinx, rebinx, w // rebiny, rebiny, arr.shape[2])
+    if doAver:
+        return reshaped.mean(axis=(1, 3))
+    return reshaped.sum(axis=(1, 3))
 
 
 ########################################################################################
 def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1):
     imgs = []
+    total = max(0, i2 - i1)
+    bar_width = 30
+    update_every = max(1, total // 50)
     for i in range(i1, i2):
         imgid = MakeDigitStr(i, 4)
         #print('reading img {}'.format(imgid))
         img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny)
         imgs.append ( img )
+
+        # In-place terminal progress bar for image loading per class.
+        done = (i - i1 + 1)
+        if total > 0 and (done == total or (done % update_every == 0)):
+            frac = done / float(total)
+            filled = int(bar_width * frac)
+            bar = '#' * filled + '-' * (bar_width - filled)
+            sys.stdout.write(f'\rReading class {hexcode}: [{bar}] {done}/{total}')
+            sys.stdout.flush()
+
+    if total > 0:
+        sys.stdout.write('\n')
+        sys.stdout.flush()
     return imgs
 
 
 ########################################################################################
-def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTrain = True, nExampleCharsToPrint = 3): 
+def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTrain = True, nExampleCharsToPrint = 5, dataPath = 'data/by_class'):
     inputs = []
     outputs = []
     nhex = len(hexcodes)
@@ -177,7 +178,7 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
         hexout = nnoutmin + ihex*sep + delta
         if hexout > 1.:
             print('ERROR: required output for {} is {}, i.e. above 1!'.format(ihex, hexout))
-        imgs = readImages('data/by_class/', hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
+        imgs = readImages(dataPath, hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
         iimg = -1
         print('will add images for class {} with output {:1.4f}'.format(hexcode, hexout))
         linesToPrint = []
@@ -197,9 +198,9 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
         else:
             print('--- Set to test over class {} with total of {} images! ---'.format(hexcode, iimg+1))
     if toTrain:
-        print('--- Set to train over total of {} images! ---'.format(hexcode, len(inputs)))
+        print('--- Set to train over total of {} images! ---'.format(len(inputs)))
     else:
-        print('--- Set to test over total of {} images! ---'.format(hexcode, len(inputs)))
+        print('--- Set to test over total of {} images! ---'.format(len(inputs)))
 
     #print('Inputs: ', inputs)
     #print('Outputs: ', outputs)

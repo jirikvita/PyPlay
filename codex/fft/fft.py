@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from pathlib import Path
 
 import numpy as np
