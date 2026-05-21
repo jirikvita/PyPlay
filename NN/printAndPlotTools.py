@@ -4,6 +4,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+def _save_plot(base_name):
+    """Save current matplotlib figure to both PNG and PDF."""
+    plt.savefig(f'{base_name}.png')
+    plt.savefig(f'{base_name}.pdf')
+
 ########################################################################################
 ########################################################################################
 
@@ -34,7 +40,7 @@ def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotte
     plt.title(label)
     if 'accur' in label:
         plt.ylim(0., 1.)
-    plt.savefig('{}{}.png'.format(label.replace(' ','_'), trainTag))
+    _save_plot('{}{}'.format(label.replace(' ','_'), trainTag))
     return
 
 ########################################################################################
@@ -52,7 +58,7 @@ def PlotDataAsHisto(data, title, trainTag, newFig = True, nbs = 200, xmin = 0., 
     plt.hist(data, bins = [dx * r for r in range(0,nbs+1)], edgecolor='black', color = col, alpha = halpha) 
     plt.title(title) 
     #plt.show()
-    plt.savefig('{}_{}.png'.format(title, trainTag))
+    _save_plot('{}_{}'.format(title, trainTag))
 
 ########################################################################################
 def PrintWs(ws):
@@ -129,7 +135,7 @@ def PlotWs(ws, trainTag):
         #cax.set_frame_on(False)
         plt.colorbar(orientation='vertical')
         #plt.show()
-        plt.savefig('ws_{}{}.png'.format(iw, trainTag))
+        _save_plot('ws_{}{}'.format(iw, trainTag))
 
         figs.append(plt)
     return

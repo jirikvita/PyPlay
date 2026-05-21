@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # jiri kvita
 # Tue 12 Oct 14:32:31 CEST 2021
 # devel: Nov 2021, Apr 2023
@@ -9,6 +9,7 @@ import os, sys
 import gc
 from pathlib import Path
 import shutil
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -29,6 +30,109 @@ from readTools import ReadData
 from printAndPlotTools import PrintUnique, PlotWs, PlotCost, PlotDataAsHisto, PlotIndivDataAsHisto
 
 stuff = []
+
+
+def _pack_weights(ws, bs):
+    """Pack per-neuron shared weights into dense matrices and scalar biases."""
+    w1 = np.column_stack([w.get_value() for w in ws[0]]).astype(np.float32)
+    w2 = np.column_stack([w.get_value() for w in ws[1]]).astype(np.float32)
+    w3 = np.column_stack([w.get_value() for w in ws[2]]).astype(np.float32)
+    b1 = np.array(float(bs[0].get_value()), dtype=np.float32)
+    b2 = np.array(float(bs[1].get_value()), dtype=np.float32)
+    b3 = np.array(float(bs[2].get_value()), dtype=np.float32)
+    return w1, w2, w3, b1, b2, b3
+
+
+def save_trained_model(ws, bs, setupTag, model_meta):
+    """Save trained parameters and metadata with tag-aware filenames."""
+    w1, w2, w3, b1, b2, b3 = _pack_weights(ws, bs)
+    params_file = Path(f'model_params{setupTag}.npz')
+    np.savez(
+        params_file,
+        w1=w1,
+        w2=w2,
+        w3=w3,
+        b1=b1,
+        b2=b2,
+        b3=b3,
+    )
+    meta_file = Path(f'model_meta{setupTag}.json')
+    with meta_file.open('w') as out:
+        json.dump(model_meta, out, indent=2, sort_keys=True)
+    print(f'Saved trained model parameters to {params_file}')
+    print(f'Saved trained model metadata to {meta_file}')
+
+
+def export_onnx_model(ws, bs, setupTag, model_meta):
+    """Export current MLP to ONNX if onnx package is available."""
+    try:
+        import onnx
+        from onnx import helper, TensorProto, numpy_helper
+    except Exception as ex:
+        print(f'WARNING: ONNX export skipped (onnx package unavailable): {ex}')
+        return
+
+    w1, w2, w3, b1, b2, b3 = _pack_weights(ws, bs)
+    exp_amplif = float(model_meta['expAmplif'])
+    use_relu = bool(model_meta['useReLu'])
+    input_dim = int(model_meta['n0'])
+    output_dim = int(model_meta['n3'])
+
+    shift = np.array([-np.log(exp_amplif)], dtype=np.float32)
+    one = np.array([1.0], dtype=np.float32)
+
+    initializers = [
+        numpy_helper.from_array(w1, name='W1'),
+        numpy_helper.from_array(w2, name='W2'),
+        numpy_helper.from_array(w3, name='W3'),
+        numpy_helper.from_array(b1, name='b1'),
+        numpy_helper.from_array(b2, name='b2'),
+        numpy_helper.from_array(b3, name='b3'),
+        numpy_helper.from_array(shift, name='sig_shift'),
+        numpy_helper.from_array(one, name='one_const'),
+    ]
+
+    nodes = []
+    nodes.append(helper.make_node('MatMul', ['x', 'W1'], ['z1_mm'], name='matmul_1'))
+    nodes.append(helper.make_node('Sub', ['z1_mm', 'b1'], ['z1_pre'], name='sub_b1'))
+    if use_relu:
+        nodes.append(helper.make_node('Relu', ['z1_pre'], ['h1'], name='relu_1'))
+    else:
+        nodes.append(helper.make_node('Add', ['z1_pre', 'sig_shift'], ['z1_shift'], name='sig_shift_1'))
+        nodes.append(helper.make_node('Sigmoid', ['z1_shift'], ['h1'], name='sigmoid_1'))
+
+    nodes.append(helper.make_node('MatMul', ['h1', 'W2'], ['z2_mm'], name='matmul_2'))
+    nodes.append(helper.make_node('Sub', ['z2_mm', 'b2'], ['z2_pre'], name='sub_b2'))
+    if use_relu:
+        nodes.append(helper.make_node('Relu', ['z2_pre'], ['h2'], name='relu_2'))
+    else:
+        nodes.append(helper.make_node('Add', ['z2_pre', 'sig_shift'], ['z2_shift'], name='sig_shift_2'))
+        nodes.append(helper.make_node('Sigmoid', ['z2_shift'], ['h2'], name='sigmoid_2'))
+
+    nodes.append(helper.make_node('MatMul', ['h2', 'W3'], ['z3_mm'], name='matmul_3'))
+    nodes.append(helper.make_node('Sub', ['z3_mm', 'b3'], ['z3_pre'], name='sub_b3'))
+    nodes.append(helper.make_node('Add', ['z3_pre', 'sig_shift'], ['z3_shift'], name='sig_shift_3'))
+    nodes.append(helper.make_node('Sigmoid', ['z3_shift'], ['y'], name='sigmoid_3'))
+
+    inputs = [helper.make_tensor_value_info('x', TensorProto.FLOAT, ['N', input_dim])]
+    outputs = [helper.make_tensor_value_info('y', TensorProto.FLOAT, ['N', output_dim])]
+
+    graph = helper.make_graph(
+        nodes,
+        f'nn_chars{setupTag}',
+        inputs,
+        outputs,
+        initializer=initializers,
+    )
+    model = helper.make_model(
+        graph,
+        producer_name='nnRun_Chars.py',
+        opset_imports=[helper.make_operatorsetid('', 13)],
+    )
+    onnx.checker.check_model(model)
+    onnx_file = Path(f'model{setupTag}.onnx')
+    onnx.save(model, str(onnx_file))
+    print(f'Exported ONNX model to {onnx_file}')
 
 ########################################################################################
 ########################################################################################
@@ -51,10 +155,10 @@ def main(argv):
     
 
     default_settings = {
-        'ntested': 4000,
-        'nIters': 200,
-        'inputn1': 80,
-        'inputn2': 40,
+        'ntested': 4000, #number of images for each category to read and test on (starting from i1)
+        'nIters': 200, # numebr of training iterations (epochs)
+        'inputn1': 80, # numnber of neurons in the 1st hidden layer
+        'inputn2': 80, # numnber of neurons in the 2nd hidden layer
         'batch_size': 64,
         'gBatch': False,
         'gTag': '',
@@ -80,6 +184,10 @@ def main(argv):
   
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
+    hostname = os.environ.get('HOSTNAME', '')
+    no_plot_show = gBatch or (hostname == 'zubr')
+    if hostname == 'zubr':
+        print('Running on zubr: interactive plot display disabled (saving files only).')
     print('Loading...')
     print('')
 
@@ -99,17 +207,16 @@ def main(argv):
     # define the output categories as hex of the corresponding chars
     # train the NN on the train data
 
+    # later try: Ns = [inputn1, inputn2, len(hexcodes) ]
     Ns = [inputn1, inputn2, 1]
     
     # STEERING WHAT CHARACTERS TO TRAIN ON! 
     hexcodes = [ #'30', '62', '41'
-        
-        
         '31', # 1
         '32', # 2
         '33', # 3
-                #'34', # 4
-                #'35', # 5
+        #'34', # 4
+        #'35', # 5
                 #'36', # 6
                 #'37', # 7
                 #'38', # 8
@@ -151,9 +258,7 @@ def main(argv):
     # later, this can hold just x as initial data on the zeroth position
     stacked_aas = []
 
-    # Ns = [5, 2, len(hexcodes) ]
-    # DEFAULT:
-    #Ns = [16, 16, 1]
+
     n0 = DIM
     n1 = Ns[0]
     n2 = Ns[1]
@@ -407,6 +512,23 @@ def main(argv):
     # Re-evaluate full training set after mini-batch updates.
     pred = predict(inputs)
     classesPrinted = {}
+    train_NcorrectDict = {}
+    train_NallDict = {}
+    train_nAll = 0
+    train_nCorrect = 0
+    # window half-width to judge correct result on both train and test sets
+    correctCut = 0.10
+    # Map scalar target values back to class IDs so per-class stats are label-driven.
+    nhex = len(hexcodes)
+    nnoutmax = 1.
+    nnoutmin = 0.
+    delta = 0.1
+    sep = (nnoutmax - nnoutmin) / nhex
+    value_to_hex = {}
+    for ihex, hexcode in enumerate(hexcodes):
+        class_value = nnoutmin + ihex*sep + delta
+        value_to_hex[class_value] = hexcode
+
     for i in range(len(inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         if not outputs[i] in classesPrinted:
@@ -416,17 +538,62 @@ def main(argv):
             Asimov_resultsDict[outputs[i]] = []
         Asimov_results.append(pred[i])
         Asimov_resultsDict[outputs[i]].append(pred[i])
+        diff = outputs[i] - pred[i]
+        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - outputs[i]))[1]
+        if not key in train_NallDict:
+            train_NallDict[key] = 1
+            train_NcorrectDict[key] = 0
+        else:
+            train_NallDict[key] = train_NallDict[key] + 1
+        train_nAll = train_nAll + 1
+        if abs(diff) < correctCut:
+            train_NcorrectDict[key] = train_NcorrectDict[key] + 1
+            train_nCorrect = train_nCorrect + 1
+
+    train_fracDict = {}
+    train_frac = []
+    for hexcode in hexcodes:
+        train_all = train_NallDict.get(hexcode, 0)
+        train_ok = train_NcorrectDict.get(hexcode, 0)
+        train_acc = (1.*train_ok / train_all) if train_all else 0.
+        train_fracDict[hexcode] = train_acc
+        train_frac.append(train_acc)
+        print('Fraction of correct TRAIN classification for class {} is {}'.format(hexcode, train_acc))
+    train_total_frac = (train_nCorrect / float(train_nAll)) if train_nAll else 0.
+    print('Total TRAIN correct fraction: {}/{} = {}'.format(train_nCorrect, train_nAll, train_total_frac))
 
     #print(Asimov_resultsDict)
     PlotCost(normcost, setupTag, 'Cost Evolution', 'red', 'dotted')
     PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
     PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
+    PlotCost(train_frac, setupTag, 'train_accuracies', 'blue', 'solid', 'Char ID', 'Accuracy')
     
     # print the final weights
     print('*** printing the final weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
     PlotWs(ws, '_post' + setupTag)   
+
+    model_meta = {
+        'setupTag': setupTag,
+        'n0': n0,
+        'n1': n1,
+        'n2': n2,
+        'n3': n3,
+        'learning_rate': learning_rate,
+        'expAmplif': expAmplif,
+        'useReLu': useReLu,
+        'hexcodes': hexcodes,
+        'cutoffx': cutoffx,
+        'cutoffy': cutoffy,
+        'rebinx': rebinx,
+        'rebiny': rebiny,
+        'baseDimx': baseDimx,
+        'baseDimy': baseDimy,
+        'dataPath': dataPath,
+    }
+    save_trained_model(ws, bs, setupTag, model_meta)
+    export_onnx_model(ws, bs, setupTag, model_meta)
 
     # Free large training-phase containers before loading test data.
     del inputs, outputs, pred, Asimov_results, Asimov_resultsDict, classesPrinted, cost, normcost
@@ -452,20 +619,6 @@ def main(argv):
     NallDict = {}
     nAll = 0
     nCorrect = 0
-    # window half-width to judge correct result on the train set
-    correctCut = 0.10
-
-    # Map scalar target values back to class IDs so per-class stats are label-driven.
-    nhex = len(hexcodes)
-    nnoutmax = 1.
-    nnoutmin = 0.
-    delta = 0.1
-    sep = (nnoutmax - nnoutmin) / nhex
-    value_to_hex = {}
-    for ihex, hexcode in enumerate(hexcodes):
-        class_value = nnoutmin + ihex*sep + delta
-        value_to_hex[class_value] = hexcode
-    
     for i in range(len(test_inputs)):
         # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
         # print('The output for true class {} is predicted as {:.2f}'.format(test_outputs[i],test_pred[i]))
@@ -493,10 +646,12 @@ def main(argv):
     frac = []
     print(NallDict)
     print(NcorrectDict)
-    for key in NallDict:
-        fracDict[key] = (1.*NcorrectDict[key]) / (1.*NallDict[key])
-        frac.append(fracDict[key])
-        print('Fraction of correct classification for class {} is {}'.format(key, fracDict[key]))
+    for hexcode in hexcodes:
+        nall = NallDict.get(hexcode, 0)
+        ncorrect = NcorrectDict.get(hexcode, 0)
+        fracDict[hexcode] = (1.*ncorrect / nall) if nall else 0.
+        frac.append(fracDict[hexcode])
+        print('Fraction of correct TEST classification for class {} is {}'.format(hexcode, fracDict[hexcode]))
     print(fracDict)
     # Guard against empty test input to avoid division by zero.
     total_frac = (nCorrect / float(nAll)) if nAll else 0.
@@ -506,7 +661,19 @@ def main(argv):
     PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
 
     # plot the accuracies:
-    PlotCost(frac, setupTag, 'accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
+    PlotCost(frac, setupTag, 'test_accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
+    plt.figure()
+    xvals = range(1, len(hexcodes)+1)
+    plt.plot(xvals, train_frac, 'o', color='blue', linewidth=1, markersize=4, linestyle='solid', label='train')
+    plt.plot(xvals, frac, 'o', color='black', linewidth=1, markersize=4, linestyle='solid', label='test')
+    plt.xticks(list(xvals), hexcodes)
+    plt.xlabel('Char ID')
+    plt.ylabel('Accuracy')
+    plt.title('train_vs_test_accuracies')
+    plt.ylim(0., 1.)
+    plt.legend()
+    plt.savefig(f'train_vs_test_accuracies{setupTag}.png')
+    plt.savefig(f'train_vs_test_accuracies{setupTag}.pdf')
 
     # print to ascii
     sumfrac = sum(frac)
@@ -518,7 +685,7 @@ def main(argv):
     outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, total_frac ) + '\n')
     outfile.close()
     
-    if not gBatch:
+    if not no_plot_show:
         plt.show()
 
     # Move generated artifacts safely with Python APIs instead of shell commands.
