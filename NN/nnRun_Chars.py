@@ -10,6 +10,7 @@ import gc
 from pathlib import Path
 import shutil
 import json
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -28,6 +29,7 @@ from random import uniform
 from argvTools import parse_argv
 from readTools import ReadData
 from printAndPlotTools import PrintUnique, PlotWs, PlotCost, PlotDataAsHisto, PlotIndivDataAsHisto
+from plot_train_vs_onnx_scatter import plot_train_vs_onnx_scatter
 
 stuff = []
 
@@ -61,6 +63,7 @@ def save_trained_model(ws, bs, setupTag, model_meta):
         json.dump(model_meta, out, indent=2, sort_keys=True)
     print(f'Saved trained model parameters to {params_file}')
     print(f'Saved trained model metadata to {meta_file}')
+    return params_file, meta_file
 
 
 def export_onnx_model(ws, bs, setupTag, model_meta):
@@ -70,7 +73,7 @@ def export_onnx_model(ws, bs, setupTag, model_meta):
         from onnx import helper, TensorProto, numpy_helper
     except Exception as ex:
         print(f'WARNING: ONNX export skipped (onnx package unavailable): {ex}')
-        return
+        return None
 
     w1, w2, w3, b1, b2, b3 = _pack_weights(ws, bs)
     exp_amplif = float(model_meta['expAmplif'])
@@ -129,10 +132,30 @@ def export_onnx_model(ws, bs, setupTag, model_meta):
         producer_name='nnRun_Chars.py',
         opset_imports=[helper.make_operatorsetid('', 13)],
     )
+
+    # Persist preprocessing and label-encoding settings inside the ONNX file
+    # so downstream inference can apply exactly the same data preparation.
+    onnx_meta = {
+        'setupTag': str(model_meta.get('setupTag', '')),
+        'dataPath': str(model_meta.get('dataPath', 'data/by_class')),
+        'cutoffx': str(model_meta.get('cutoffx', '')),
+        'cutoffy': str(model_meta.get('cutoffy', '')),
+        'rebinx': str(model_meta.get('rebinx', '')),
+        'rebiny': str(model_meta.get('rebiny', '')),
+        'baseDimx': str(model_meta.get('baseDimx', '')),
+        'baseDimy': str(model_meta.get('baseDimy', '')),
+        'preprocessThr': str(model_meta.get('preprocessThr', 0.5)),
+        'labelNnoutmin': str(model_meta.get('labelNnoutmin', 0.0)),
+        'labelNnoutmax': str(model_meta.get('labelNnoutmax', 1.0)),
+        'labelDelta': str(model_meta.get('labelDelta', 0.1)),
+    }
+    helper.set_model_props(model, onnx_meta)
+
     onnx.checker.check_model(model)
     onnx_file = Path(f'model{setupTag}.onnx')
     onnx.save(model, str(onnx_file))
     print(f'Exported ONNX model to {onnx_file}')
+    return onnx_file
 
 ########################################################################################
 ########################################################################################
@@ -155,12 +178,13 @@ def main(argv):
     
 
     default_settings = {
-        'ntested': 4000, #number of images for each category to read and test on (starting from i1)
-        'nIters': 200, # numebr of training iterations (epochs)
+        'ntested': 3000, #number of images for each category to read and test on (starting from i1)
+        'nIters': 50, # numebr of training iterations (epochs)
         'inputn1': 80, # numnber of neurons in the 1st hidden layer
         'inputn2': 80, # numnber of neurons in the 2nd hidden layer
-        'batch_size': 64,
-        'gBatch': False,
+        'batch_size': 32,
+        'gBatch': True,
+        'runOnnxTrainEval': True,
         'gTag': '',
         'dataPath': os.environ.get('NN_DATA_PATH', 'data/by_class'),
     }
@@ -172,6 +196,7 @@ def main(argv):
     inputn2 = settings['inputn2']
     batch_size = settings['batch_size']
     gBatch = settings['gBatch']
+    runOnnxTrainEval = settings['runOnnxTrainEval']
     gTag = settings['gTag']
     dataPath = settings['dataPath']
 
@@ -185,8 +210,11 @@ def main(argv):
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
     hostname = os.environ.get('HOSTNAME', '')
-    no_plot_show = gBatch or (hostname == 'zubr')
-    if hostname == 'zubr':
+    do_plots = not gBatch
+    no_plot_show = (hostname == 'zubr')
+    if gBatch:
+        print('Batch mode enabled: plotting disabled.')
+    elif hostname == 'zubr':
         print('Running on zubr: interactive plot display disabled (saving files only).')
     print('Loading...')
     print('')
@@ -196,6 +224,7 @@ def main(argv):
     print(f'inputn1: {inputn1:}')
     print(f'inputn2: {inputn2:}')
     print(f'batch_size: {batch_size:}')
+    print(f'runOnnxTrainEval: {runOnnxTrainEval:}')
     print(f'dataPath: {dataPath}')
 
     # HACK!
@@ -247,6 +276,7 @@ def main(argv):
     # So far a smooth output within a range.
 
     expAmplif = 2. # 1.
+    preprocessThr = 0.5
     b0 = 1.
     useReLu = True
     
@@ -274,7 +304,7 @@ def main(argv):
     
     # Include optional user tag in output naming so CLI tags affect produced artifacts.
     user_tag = f'_tag_{gTag}' if gTag else ''
-    setupTag = f'{user_tag}_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_rate_{learning_rate:1.3f}'
+    setupTag = f'{user_tag}_n1_{n1}_n2_{n2}_i1_{i1}_i2_{i2}_{trainChars}_nImgs_{ntested}_iters_{nIters}_bs_{batch_size}_rate_{learning_rate:1.3f}'
     print(f'Train tag: {setupTag}')
     
     print('...defining first NN layer...')
@@ -348,7 +378,8 @@ def main(argv):
     print('...printing the random initial weights...')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_pre' + setupTag)
+    if do_plots:
+        PlotWs(ws, '_pre' + setupTag)
 
     ##################################################
     #    Step 3: Define gradient and update rule     #
@@ -449,7 +480,7 @@ def main(argv):
         print('Hint: verify that your by_class dataset contains all requested hex class IDs.')
         return
 
-    inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, dataPath=dataPath)
+    inputs, outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, dataPath=dataPath, thr=preprocessThr)
     inputs = np.asarray(inputs, dtype=np.float64)
     outputs = np.asarray(outputs, dtype=np.float64)
     #print('Outputs: ', outputs)
@@ -550,6 +581,30 @@ def main(argv):
             train_NcorrectDict[key] = train_NcorrectDict[key] + 1
             train_nCorrect = train_nCorrect + 1
 
+    # Save per-event training predictions for the first Ndetailes events in each class.
+    Ndetailes = 100
+    train_detail_rows = []
+    train_detail_count = {hexcode: 0 for hexcode in hexcodes}
+    for i in range(len(inputs)):
+        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - outputs[i]))[1]
+        if train_detail_count[key] >= Ndetailes:
+            continue
+        train_detail_rows.append([
+            i1 + i,
+            key,
+            float(outputs[i]),
+            float(pred[i]),
+            float(outputs[i] - pred[i]),
+        ])
+        train_detail_count[key] = train_detail_count[key] + 1
+
+    train_details_csv = Path(f'train_event_details_N{Ndetailes}{setupTag}.csv')
+    with train_details_csv.open('w', newline='') as out:
+        writer = csv.writer(out)
+        writer.writerow(['event_abs_i', 'true_hex_class', 'target_value', 'classifier_output', 'diff_target_minus_output'])
+        writer.writerows(train_detail_rows)
+    print(f'Saved training event details to {train_details_csv}')
+
     train_fracDict = {}
     train_frac = []
     for hexcode in hexcodes:
@@ -563,16 +618,18 @@ def main(argv):
     print('Total TRAIN correct fraction: {}/{} = {}'.format(train_nCorrect, train_nAll, train_total_frac))
 
     #print(Asimov_resultsDict)
-    PlotCost(normcost, setupTag, 'Cost Evolution', 'red', 'dotted')
-    PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
-    PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
-    PlotCost(train_frac, setupTag, 'train_accuracies', 'blue', 'solid', 'Char ID', 'Accuracy')
+    if do_plots:
+        PlotCost(normcost, setupTag, 'Cost Evolution', 'red', 'dotted')
+        PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
+        PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
+        PlotCost(train_frac, setupTag, 'train_accuracies', 'blue', 'solid', 'Char ID', 'Accuracy')
     
     # print the final weights
     print('*** printing the final weights ***')
     #PrintWs(ws)
     #PrintBs(bs)
-    PlotWs(ws, '_post' + setupTag)   
+    if do_plots:
+        PlotWs(ws, '_post' + setupTag)
 
     model_meta = {
         'setupTag': setupTag,
@@ -590,10 +647,34 @@ def main(argv):
         'rebiny': rebiny,
         'baseDimx': baseDimx,
         'baseDimy': baseDimy,
+        'preprocessThr': preprocessThr,
+        'labelNnoutmin': nnoutmin,
+        'labelNnoutmax': nnoutmax,
+        'labelDelta': delta,
         'dataPath': dataPath,
     }
-    save_trained_model(ws, bs, setupTag, model_meta)
-    export_onnx_model(ws, bs, setupTag, model_meta)
+    _, meta_file = save_trained_model(ws, bs, setupTag, model_meta)
+    onnx_file = export_onnx_model(ws, bs, setupTag, model_meta)
+
+    if runOnnxTrainEval and onnx_file is not None:
+        try:
+            from run_onnx_same_dataset import run_onnx_on_same_dataset
+
+            print('+++ running optional ONNX evaluation on TRAIN dataset +++')
+            run_onnx_on_same_dataset(
+                results_dir='.',
+                data_path=dataPath,
+                i1=i1,
+                i2=i2,
+                batch_size=batch_size,
+                correct_cut=correctCut,
+                meta_file=meta_file,
+                onnx_file=onnx_file,
+                n_details=100,
+                make_plots=do_plots,
+            )
+        except Exception as ex:
+            print(f'WARNING: optional ONNX train-dataset evaluation failed: {ex}')
 
     # Free large training-phase containers before loading test data.
     del inputs, outputs, pred, Asimov_results, Asimov_resultsDict, classesPrinted, cost, normcost
@@ -606,7 +687,7 @@ def main(argv):
 
     i1 = 1*i2
     i2 = i1 + ntested # 500+i2
-    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1, dataPath)
+    test_inputs, test_outputs = ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, False, -1, dataPath, thr=preprocessThr)
     print('*** Test outputs:')
     PrintUnique(test_outputs)
     test_results = []
@@ -657,23 +738,24 @@ def main(argv):
     total_frac = (nCorrect / float(nAll)) if nAll else 0.
     print('Total correct fraction: {}/{} = {}'.format(nCorrect, nAll, total_frac ))
 
-    PlotDataAsHisto(test_results, 'test_results', setupTag)
-    PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
+    if do_plots:
+        PlotDataAsHisto(test_results, 'test_results', setupTag)
+        PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
 
-    # plot the accuracies:
-    PlotCost(frac, setupTag, 'test_accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
-    plt.figure()
-    xvals = range(1, len(hexcodes)+1)
-    plt.plot(xvals, train_frac, 'o', color='blue', linewidth=1, markersize=4, linestyle='solid', label='train')
-    plt.plot(xvals, frac, 'o', color='black', linewidth=1, markersize=4, linestyle='solid', label='test')
-    plt.xticks(list(xvals), hexcodes)
-    plt.xlabel('Char ID')
-    plt.ylabel('Accuracy')
-    plt.title('train_vs_test_accuracies')
-    plt.ylim(0., 1.)
-    plt.legend()
-    plt.savefig(f'train_vs_test_accuracies{setupTag}.png')
-    plt.savefig(f'train_vs_test_accuracies{setupTag}.pdf')
+        # plot the accuracies:
+        PlotCost(frac, setupTag, 'test_accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
+        plt.figure()
+        xvals = range(1, len(hexcodes)+1)
+        plt.plot(xvals, train_frac, 'o', color='blue', linewidth=1, markersize=4, linestyle='solid', label='train')
+        plt.plot(xvals, frac, 'o', color='black', linewidth=1, markersize=4, linestyle='solid', label='test')
+        plt.xticks(list(xvals), hexcodes)
+        plt.xlabel('Char ID')
+        plt.ylabel('Accuracy')
+        plt.title('train_vs_test_accuracies')
+        plt.ylim(0., 1.)
+        plt.legend()
+        plt.savefig(f'train_vs_test_accuracies{setupTag}.png')
+        plt.savefig(f'train_vs_test_accuracies{setupTag}.pdf')
 
     # print to ascii
     sumfrac = sum(frac)
@@ -685,7 +767,7 @@ def main(argv):
     outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, total_frac ) + '\n')
     outfile.close()
     
-    if not no_plot_show:
+    if do_plots and not no_plot_show:
         plt.show()
 
     # Move generated artifacts safely with Python APIs instead of shell commands.
@@ -694,6 +776,19 @@ def main(argv):
     for artifact in Path('.').glob(f'*{setupTag}*.*'):
         if artifact.is_file():
             shutil.move(str(artifact), str(results_dir / artifact.name))
+    for pattern in (f'ws_*_pre{setupTag}.png', f'ws_*_pre{setupTag}.pdf'):
+        for artifact in Path('.').glob(pattern):
+            if artifact.is_file():
+                shutil.move(str(artifact), str(results_dir / artifact.name))
+
+    if do_plots:
+        try:
+            plot_train_vs_onnx_scatter(
+                results_dir=results_dir,
+                show=(not no_plot_show),
+            )
+        except Exception as ex:
+            print(f'WARNING: train-vs-onnx scatter plotting failed: {ex}')
     
     return
 

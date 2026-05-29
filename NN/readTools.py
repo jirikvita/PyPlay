@@ -133,7 +133,7 @@ def Rebin2DRGBArray(data, rebinx = 2, rebiny = 2, doAver = True):
 
 
 ########################################################################################
-def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1):
+def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1, thr = 0.5):
     imgs = []
     total = max(0, i2 - i1)
     bar_width = 30
@@ -141,7 +141,7 @@ def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1
     for i in range(i1, i2):
         imgid = MakeDigitStr(i, 4)
         #print('reading img {}'.format(imgid))
-        img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny)
+        img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny, thr=thr)
         imgs.append ( img )
 
         # In-place terminal progress bar for image loading per class.
@@ -160,7 +160,20 @@ def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1
 
 
 ########################################################################################
-def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTrain = True, nExampleCharsToPrint = 5, dataPath = 'data/by_class'):
+def ReadData(
+    hexcodes,
+    i1,
+    i2,
+    cutoffx,
+    cutoffy,
+    rebinx,
+    rebiny,
+    baseDimx,
+    toTrain = True,
+    nExampleCharsToPrint = 5,
+    dataPath = 'data/by_class',
+    thr = 0.5,
+):
     inputs = []
     outputs = []
     nhex = len(hexcodes)
@@ -178,7 +191,7 @@ def ReadData(hexcodes, i1, i2, cutoffx, cutoffy, rebinx, rebiny, baseDimx, toTra
         hexout = nnoutmin + ihex*sep + delta
         if hexout > 1.:
             print('ERROR: required output for {} is {}, i.e. above 1!'.format(ihex, hexout))
-        imgs = readImages(dataPath, hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny)
+        imgs = readImages(dataPath, hexcode, i1, i2, cutoffx, cutoffy, rebinx, rebiny, thr=thr)
         iimg = -1
         print('will add images for class {} with output {:1.4f}'.format(hexcode, hexout))
         linesToPrint = []
