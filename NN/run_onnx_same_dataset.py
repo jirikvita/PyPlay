@@ -133,7 +133,7 @@ def run_inference_in_batches(run_batch_fn, x, batch_size):
 
 
 def plot_outputs_split_by_class(results_dir, setup_tag, hexcodes, pred_by_class):
-    plt.figure(figsize=(9, 5))
+    plt.figure()
     bins = np.linspace(0.0, 1.0, 101)
 
     for hexcode in hexcodes:

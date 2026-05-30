@@ -97,23 +97,26 @@ def export_onnx_model(ws, bs, setupTag, model_meta):
 
     nodes = []
     nodes.append(helper.make_node('MatMul', ['x', 'W1'], ['z1_mm'], name='matmul_1'))
-    nodes.append(helper.make_node('Sub', ['z1_mm', 'b1'], ['z1_pre'], name='sub_b1'))
     if use_relu:
+        nodes.append(helper.make_node('Sub', ['z1_mm', 'b1'], ['z1_pre'], name='sub_b1'))
         nodes.append(helper.make_node('Relu', ['z1_pre'], ['h1'], name='relu_1'))
     else:
+        nodes.append(helper.make_node('Add', ['z1_mm', 'b1'], ['z1_pre'], name='add_b1'))
         nodes.append(helper.make_node('Add', ['z1_pre', 'sig_shift'], ['z1_shift'], name='sig_shift_1'))
         nodes.append(helper.make_node('Sigmoid', ['z1_shift'], ['h1'], name='sigmoid_1'))
 
     nodes.append(helper.make_node('MatMul', ['h1', 'W2'], ['z2_mm'], name='matmul_2'))
-    nodes.append(helper.make_node('Sub', ['z2_mm', 'b2'], ['z2_pre'], name='sub_b2'))
     if use_relu:
+        nodes.append(helper.make_node('Sub', ['z2_mm', 'b2'], ['z2_pre'], name='sub_b2'))
         nodes.append(helper.make_node('Relu', ['z2_pre'], ['h2'], name='relu_2'))
     else:
+        nodes.append(helper.make_node('Add', ['z2_mm', 'b2'], ['z2_pre'], name='add_b2'))
         nodes.append(helper.make_node('Add', ['z2_pre', 'sig_shift'], ['z2_shift'], name='sig_shift_2'))
         nodes.append(helper.make_node('Sigmoid', ['z2_shift'], ['h2'], name='sigmoid_2'))
 
     nodes.append(helper.make_node('MatMul', ['h2', 'W3'], ['z3_mm'], name='matmul_3'))
-    nodes.append(helper.make_node('Sub', ['z3_mm', 'b3'], ['z3_pre'], name='sub_b3'))
+    # Output layer is always sigmoid in training and uses dot + b inside the exponent.
+    nodes.append(helper.make_node('Add', ['z3_mm', 'b3'], ['z3_pre'], name='add_b3'))
     nodes.append(helper.make_node('Add', ['z3_pre', 'sig_shift'], ['z3_shift'], name='sig_shift_3'))
     nodes.append(helper.make_node('Sigmoid', ['z3_shift'], ['y'], name='sigmoid_3'))
 
@@ -178,11 +181,11 @@ def main(argv):
     
 
     default_settings = {
-        'ntested': 3000, #number of images for each category to read and test on (starting from i1)
-        'nIters': 50, # numebr of training iterations (epochs)
-        'inputn1': 80, # numnber of neurons in the 1st hidden layer
-        'inputn2': 80, # numnber of neurons in the 2nd hidden layer
-        'batch_size': 32,
+        'ntested': 5000, #number of images for each category to read and test on (starting from i1)
+        'nIters': 100, # numebr of training iterations (epochs)
+        'inputn1': 120, # numnber of neurons in the 1st hidden layer
+        'inputn2': 120, # numnber of neurons in the 2nd hidden layer
+        'batch_size': 64,
         'gBatch': True,
         'runOnnxTrainEval': True,
         'gTag': '',
@@ -210,10 +213,11 @@ def main(argv):
     print('*** Settings:')
     print('tag={:}, batch={:}'.format(gTag, gBatch))
     hostname = os.environ.get('HOSTNAME', '')
-    do_plots = not gBatch
-    no_plot_show = (hostname == 'zubr')
+    # Always produce plot files; only interactive display is conditional.
+    do_plots = True
+    no_plot_show = gBatch or (hostname == 'zubr')
     if gBatch:
-        print('Batch mode enabled: plotting disabled.')
+        print('Batch mode enabled: plots will be saved, interactive display disabled.')
     elif hostname == 'zubr':
         print('Running on zubr: interactive plot display disabled (saving files only).')
     print('Loading...')
@@ -244,8 +248,8 @@ def main(argv):
         '31', # 1
         '32', # 2
         '33', # 3
-        #'34', # 4
-        #'35', # 5
+        '34', # 4
+        '35', # 5
                 #'36', # 6
                 #'37', # 7
                 #'38', # 8
