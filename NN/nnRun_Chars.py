@@ -181,10 +181,10 @@ def main(argv):
     
 
     default_settings = {
-        'ntested': 5000, #number of images for each category to read and test on (starting from i1)
+        'ntested': 25000, #number of images for each category to read and test on (starting from i1)
         'nIters': 100, # numebr of training iterations (epochs)
-        'inputn1': 120, # numnber of neurons in the 1st hidden layer
-        'inputn2': 120, # numnber of neurons in the 2nd hidden layer
+        'inputn1': 150, # numnber of neurons in the 1st hidden layer
+        'inputn2': 150, # numnber of neurons in the 2nd hidden layer
         'batch_size': 64,
         'gBatch': True,
         'runOnnxTrainEval': True,
