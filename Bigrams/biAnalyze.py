@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import importlib
+import re
 import string
 import sys
 import unicodedata
@@ -59,6 +60,21 @@ def extract_text_from_pdf(pdf_path: Path, label: str) -> str:
     return "\n".join(parts)
 
 
+def save_text_export(text: str, source_pdf: Path, output_dir: Path, label: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"{source_pdf.stem}.txt"
+    out_path.write_text(text, encoding="utf-8")
+    print(f"Saved {label} extracted text to: {out_path}")
+    return out_path
+
+
+def load_text_file(text_path: Path, label: str) -> str:
+    if not text_path.exists() or not text_path.is_file():
+        raise FileNotFoundError(f"Text file not found for {label}: {text_path}")
+    print(f"Reading {label} analysis input from text file: {text_path}")
+    return text_path.read_text(encoding="utf-8")
+
+
 def strip_accents_to_ascii(text: str) -> str:
     # Normalize Czech diacritics so frequencies are measured over a..z only.
     normalized = unicodedata.normalize("NFD", text)
@@ -113,6 +129,33 @@ def normalized_bigram_matrix_az(text: str) -> list[list[float]]:
     return [[cell / total_bigrams for cell in row] for row in matrix]
 
 
+def word_length_distribution(text: str) -> dict[int, int]:
+    normalized_text = normalize_case_and_accents(text)
+    words = re.findall(r"[a-z]+", normalized_text)
+    length_counts = Counter(len(word) for word in words)
+    return dict(sorted(length_counts.items()))
+
+
+def word_length_distribution_filtered(
+    text: str,
+    remove_common_english_articles: bool = False,
+    drop_one_letter_words: bool = True,
+) -> dict[int, int]:
+    normalized_text = normalize_case_and_accents(text)
+    words = re.findall(r"[a-z]+", normalized_text)
+
+    filtered_words = []
+    for word in words:
+        if drop_one_letter_words and len(word) == 1:
+            continue
+        if remove_common_english_articles and word in {"the", "an"}:
+            continue
+        filtered_words.append(word)
+
+    length_counts = Counter(len(word) for word in filtered_words)
+    return dict(sorted(length_counts.items()))
+
+
 def plot_bigram_square_matrix(
     cz_matrix: list[list[float]],
     en_matrix: list[list[float]],
@@ -159,7 +202,6 @@ def plot_bigram_square_matrix(
     fig.savefig(pdf_path)
     print(f"Saved bigram plot PNG to: {png_path}")
     print(f"Saved bigram plot PDF to: {pdf_path}")
-    plt.show()
 
 
 def plot_histograms(
@@ -187,8 +229,39 @@ def plot_histograms(
     fig.savefig(pdf_path)
     print(f"Saved histogram PNG to: {png_path}")
     print(f"Saved histogram PDF to: {pdf_path}")
-    print("Rendering histogram plot...")
-    plt.show()
+    print("Prepared histogram plot.")
+
+
+def plot_word_length_histogram_pair(
+    cz_length_counts: dict[int, int],
+    en_length_counts: dict[int, int],
+    title: str,
+    png_path: Path,
+    pdf_path: Path,
+    axis_lengths: list[int],
+    y_max: int,
+) -> None:
+    lengths = axis_lengths
+    cz_values = [cz_length_counts.get(length, 0) for length in lengths]
+    en_values = [en_length_counts.get(length, 0) for length in lengths]
+    width = 0.42
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar([length - width / 2 for length in lengths], cz_values, width=width, color="green", label="CZ")
+    ax.bar([length + width / 2 for length in lengths], en_values, width=width, color="blue", label="ENG")
+    ax.set_xlabel("Word length")
+    ax.set_ylabel("Word count")
+    ax.set_title(title)
+    ax.set_xticks(lengths)
+    if lengths:
+        ax.set_xlim(min(lengths) - 0.8, max(lengths) + 0.8)
+    ax.set_ylim(0, max(1, int(y_max * 1.05)))
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(png_path)
+    fig.savefig(pdf_path)
+    print(f"Saved word-length pair PNG to: {png_path}")
+    print(f"Saved word-length pair PDF to: {pdf_path}")
 
 
 def main() -> int:
@@ -207,13 +280,42 @@ def main() -> int:
         default=Path("/home/qitek/Documents/83290_eng.pdf"),
         help="Path to English PDF",
     )
+    parser.add_argument(
+        "--export-text",
+        dest="export_text",
+        action="store_true",
+        help="Export each PDF extraction to a .txt file before analysis.",
+    )
+    parser.add_argument(
+        "--no-export-text",
+        dest="export_text",
+        action="store_false",
+        help="Use existing text files without exporting from PDFs (default).",
+    )
+    parser.add_argument(
+        "--text-out-dir",
+        type=Path,
+        default=Path("extracted_text"),
+        help="Directory for exported text files when --export-text is enabled.",
+    )
+    parser.set_defaults(export_text=False)
     args = parser.parse_args()
 
+    cz_text_path = args.text_out_dir / f"{args.cz_pdf.stem}.txt"
+    en_text_path = args.text_out_dir / f"{args.en_pdf.stem}.txt"
+
     try:
-        cz_text = extract_text_from_pdf(args.cz_pdf, label="CZ")
-        en_text = extract_text_from_pdf(args.en_pdf, label="ENG")
+        if args.export_text:
+            print("Exporting extracted PDF text to files...")
+            cz_pdf_text = extract_text_from_pdf(args.cz_pdf, label="CZ")
+            en_pdf_text = extract_text_from_pdf(args.en_pdf, label="ENG")
+            cz_text_path = save_text_export(cz_pdf_text, args.cz_pdf, args.text_out_dir, "CZ")
+            en_text_path = save_text_export(en_pdf_text, args.en_pdf, args.text_out_dir, "ENG")
+
+        cz_text = load_text_file(cz_text_path, label="CZ")
+        en_text = load_text_file(en_text_path, label="ENG")
     except Exception as exc:
-        print(f"Error reading PDFs: {exc}", file=sys.stderr)
+        print(f"Error preparing text inputs: {exc}", file=sys.stderr)
         return 1
 
     print("Computing frequency distributions...")
@@ -222,6 +324,20 @@ def main() -> int:
     print("Computing normalized bigram matrices (27x27, includes space)...")
     cz_bigram_matrix = normalized_bigram_matrix_az(cz_text)
     en_bigram_matrix = normalized_bigram_matrix_az(en_text)
+    print("Computing word-length distributions...")
+    cz_word_lengths = word_length_distribution(cz_text)
+    en_word_lengths = word_length_distribution(en_text)
+    print("Computing filtered word-length distributions (drop 1-letter words; ENG also drop 'the' and 'an')...")
+    cz_word_lengths_filtered = word_length_distribution_filtered(
+        cz_text,
+        remove_common_english_articles=False,
+        drop_one_letter_words=True,
+    )
+    en_word_lengths_filtered = word_length_distribution_filtered(
+        en_text,
+        remove_common_english_articles=True,
+        drop_one_letter_words=True,
+    )
 
     print("Letter frequencies (%):")
     print("letter\tCZ\tENG")
@@ -232,6 +348,24 @@ def main() -> int:
     histogram_pdf = Path("letter_frequency_histogram.pdf").resolve()
     bigram_png = Path("bigram_xy_square_matrix.png").resolve()
     bigram_pdf = Path("bigram_xy_square_matrix.pdf").resolve()
+    wordlen_pair_png = Path("word_length_histogram_pair.png").resolve()
+    wordlen_pair_pdf = Path("word_length_histogram_pair.pdf").resolve()
+    wordlen_filtered_pair_png = Path("word_length_histogram_pair_filtered.png").resolve()
+    wordlen_filtered_pair_pdf = Path("word_length_histogram_pair_filtered.pdf").resolve()
+
+    shared_word_lengths = sorted(
+        set(cz_word_lengths.keys())
+        | set(en_word_lengths.keys())
+        | set(cz_word_lengths_filtered.keys())
+        | set(en_word_lengths_filtered.keys())
+    )
+    shared_y_max = max(
+        list(cz_word_lengths.values())
+        + list(en_word_lengths.values())
+        + list(cz_word_lengths_filtered.values())
+        + list(en_word_lengths_filtered.values())
+        + [0]
+    )
 
     plot_histograms(
         cz_freq,
@@ -246,6 +380,26 @@ def main() -> int:
         bigram_png,
         bigram_pdf,
     )
+    plot_word_length_histogram_pair(
+        cz_word_lengths,
+        en_word_lengths,
+        "Word Length Distribution (CZ vs ENG)",
+        wordlen_pair_png,
+        wordlen_pair_pdf,
+        shared_word_lengths,
+        shared_y_max,
+    )
+    plot_word_length_histogram_pair(
+        cz_word_lengths_filtered,
+        en_word_lengths_filtered,
+        "Word Length Distribution Filtered (drop 1-letter; ENG drop 'the' and 'an')",
+        wordlen_filtered_pair_png,
+        wordlen_filtered_pair_pdf,
+        shared_word_lengths,
+        shared_y_max,
+    )
+    print("Showing all plots...")
+    plt.show()
     print("Done.")
     return 0
 
