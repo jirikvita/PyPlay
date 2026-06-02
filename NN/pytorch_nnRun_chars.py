@@ -5,6 +5,7 @@
 import os
 import sys
 import gc
+import subprocess
 from pathlib import Path
 import shutil
 import json
@@ -56,6 +57,36 @@ def save_torch_model(model, setup_tag, model_meta):
     print(f"Saved PyTorch model to {model_file}")
     print(f"Saved model metadata to {meta_file}")
     return model_file, meta_file
+
+
+def save_torch_onnx_model(model, setup_tag, input_dim, device, opset=11):
+    import torch
+
+    onnx_file = Path(f"model{setup_tag}.onnx")
+    dummy = torch.zeros(1, input_dim, dtype=torch.float32, device=device)
+    was_training = model.training
+
+    try:
+        model.eval()
+        torch.onnx.export(
+            model,
+            dummy,
+            str(onnx_file),
+            export_params=True,
+            opset_version=opset,
+            do_constant_folding=True,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+        )
+        print(f"Saved ONNX model to {onnx_file}")
+        return onnx_file
+    except Exception as ex:
+        print(f"WARNING: ONNX export failed: {ex}")
+        return None
+    finally:
+        if was_training:
+            model.train()
 
 
 def plot_dense_weights_torch(model, setup_tag, suffix="post"):
@@ -147,12 +178,27 @@ def _predict_numpy(model, x_np, device, batch_size):
     return np.concatenate(preds, axis=0)
 
 
+def build_results_pdf_report(results_dir):
+    report_script = Path(__file__).with_name("build_pdf_report_from_results.py")
+    if not report_script.exists():
+        print(f"WARNING: report builder script not found: {report_script}")
+        return
+
+    cmd = [sys.executable, str(report_script), str(results_dir)]
+    print("Running report builder: {}".format(" ".join(cmd)))
+    proc = subprocess.run(cmd)
+    if proc.returncode != 0:
+        print("WARNING: report builder failed for {}".format(results_dir))
+    else:
+        print("Report PDF generated in {}".format(results_dir))
+
+
 def main(argv):
     default_settings = {
-        "ntested": 5000,
-        "nIters": 50,
-        "inputn1": 80,
-        "inputn2": 80,
+        "ntested": 15000,
+        "nIters": 100,
+        "inputn1": 250,
+        "inputn2": 200,
         "batch_size": 32,
         "gBatch": True,
         "runOnnxTrainEval": True,
@@ -168,6 +214,7 @@ def main(argv):
     inputn2 = settings["inputn2"]
     batch_size = settings["batch_size"]
     gBatch = settings["gBatch"]
+    runOnnxTrainEval = settings["runOnnxTrainEval"]
     useFullTrainSet = settings["useFullTrainSet"]
     gTag = settings["gTag"]
     dataPath = settings["dataPath"]
@@ -192,15 +239,22 @@ def main(argv):
     print(f"inputn1: {inputn1}")
     print(f"inputn2: {inputn2}")
     print(f"batch_size: {batch_size}")
+    print(f"runOnnxTrainEval: {runOnnxTrainEval}")
     print(f"useFullTrainSet: {useFullTrainSet}")
     print(f"dataPath: {dataPath}")
 
     hexcodes = [
-        "31",
-        "32",
-        "33",
-        # "34",
-        # "35",
+     "30", # 1 
+		"31", # 1 
+		"32", # 2
+		"33", # 3
+		"34", # 4
+		"35", # 5
+        '36', # 6
+        '37', # 7
+        '38', # 8
+        '39', # 9
+                #'5a', # z
     ]
     print("Will train on characters with hex codes: {}".format(hexcodes))
 
@@ -398,11 +452,11 @@ def main(argv):
             PlotCost(loss_hist, setup_tag, "Cost Evolution", "red", "dotted")
         PlotDataAsHisto(train_metrics["results"], "Asimov_results", setup_tag)
         PlotIndivDataAsHisto(train_metrics["resultsDict"], "Asimov_results", setup_tag)
-        PlotCost(train_metrics["frac"], setup_tag, "train_accuracies", "blue", "solid", "Char ID", "Accuracy")
+        PlotCost(train_metrics["frac"], setup_tag, "train_accuracies", "blue", "solid", "Char ID", "Accuracy", 0.0, 1.1)
         if len(val_inputs):
             PlotDataAsHisto(val_metrics["results"], "validation_results", setup_tag)
             PlotIndivDataAsHisto(val_metrics["resultsDict"], "validation_results", setup_tag)
-            PlotCost(val_metrics["frac"], setup_tag, "validation_accuracies", "green", "solid", "Char ID", "Accuracy")
+            PlotCost(val_metrics["frac"], setup_tag, "validation_accuracies", "green", "solid", "Char ID", "Accuracy", 0.0, 1.1)
 
     if do_plots:
         plot_dense_weights_torch(net, setup_tag, suffix="post")
@@ -431,6 +485,10 @@ def main(argv):
         "dataPath": dataPath,
     }
     save_torch_model(net, setup_tag, model_meta)
+    if runOnnxTrainEval:
+        save_torch_onnx_model(net, setup_tag, dim, device)
+    else:
+        print("ONNX export disabled by runOnnxTrainEval setting")
 
     del inputs, outputs, train_inputs, train_outputs, train_pred
     gc.collect()
@@ -456,7 +514,7 @@ def main(argv):
     if do_plots:
         PlotDataAsHisto(test_metrics["results"], "test_results", setup_tag)
         PlotIndivDataAsHisto(test_metrics["resultsDict"], "test_results", setup_tag)
-        PlotCost(test_metrics["frac"], setup_tag, "test_accuracies", "black", "solid", "Char ID", "Accuracy")
+        PlotCost(test_metrics["frac"], setup_tag, "test_accuracies", "black", "solid", "Char ID", "Accuracy", 0.0, 1.1)
 
         plt.figure()
         xvals = range(1, len(hexcodes) + 1)
@@ -468,7 +526,7 @@ def main(argv):
         plt.xlabel("Char ID")
         plt.ylabel("Accuracy")
         plt.title("train_vs_validation_vs_test_accuracies")
-        plt.ylim(0.0, 1.0)
+        plt.ylim(0.0, 1.1)
         plt.legend()
         plt.savefig(f"train_vs_validation_vs_test_accuracies{setup_tag}.png")
         plt.savefig(f"train_vs_validation_vs_test_accuracies{setup_tag}.pdf")
@@ -501,6 +559,7 @@ def main(argv):
             shutil.move(str(artifact), str(results_dir / artifact.name))
 
     print(f"All artifacts moved to {results_dir}")
+    build_results_pdf_report(results_dir)
 
 
 if __name__ == "__main__":

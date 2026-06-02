@@ -86,7 +86,10 @@ def readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny, thr = 0.5):
     
     # 128x128 pixels
     image_path = os.path.join(path, hexcode, f'train_{hexcode}', f'train_{hexcode}_{imgid}.png')
-    image = Image.open(image_path)
+    try:
+        image = Image.open(image_path)
+    except Exception:
+        return None
     image_array_orig = np.asarray(image)
     image_array = image_array_orig
     
@@ -135,13 +138,23 @@ def Rebin2DRGBArray(data, rebinx = 2, rebiny = 2, doAver = True):
 ########################################################################################
 def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1, thr = 0.5):
     imgs = []
+    n_missing = 0
+    n_bad = 0
     total = max(0, i2 - i1)
     bar_width = 30
     update_every = max(1, total // 50)
     for i in range(i1, i2):
         imgid = MakeDigitStr(i, 4)
+        image_path = os.path.join(path, hexcode, f'train_{hexcode}', f'train_{hexcode}_{imgid}.png')
+        if not os.path.isfile(image_path):
+            n_missing += 1
+            continue
+
         #print('reading img {}'.format(imgid))
         img = readPng(path, hexcode, imgid, cutoffx, cutoffy, rebinx, rebiny, thr=thr)
+        if img is None:
+            n_bad += 1
+            continue
         imgs.append ( img )
 
         # In-place terminal progress bar for image loading per class.
@@ -156,6 +169,10 @@ def readImages(path, hexcode, i1, i2, cutoffx, cutoffy, rebinx = -1, rebiny = -1
     if total > 0:
         sys.stdout.write('\n')
         sys.stdout.flush()
+
+    if n_missing > 0 or n_bad > 0:
+        print('WARNING: class {} skipped {} missing and {} unreadable images in requested index range [{}, {}).'.format(hexcode, n_missing, n_bad, i1, i2))
+
     return imgs
 
 

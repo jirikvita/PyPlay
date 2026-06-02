@@ -24,7 +24,7 @@ def PrintUnique(X):
     return uniq
 
 ########################################################################################
-def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotted', lx = 'Epoch', ly = 'Cost evolution'):
+def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotted', lx = 'Epoch', ly = 'Cost evolution', ymin = None, ymax = None):
     #Plot the flow of cost:
     #print('\nThe flow of cost during model run is as following:')
     # matplotlib inline
@@ -38,8 +38,12 @@ def PlotCost(cost, trainTag, label = 'Cost Evolution', col = 'red', lst = 'dotte
     plt.xlabel(lx)
     plt.ylabel(ly)
     plt.title(label)
-    if 'accur' in label:
-        plt.ylim(0., 1.)
+    if ymin is not None or ymax is not None:
+        ymin_use = ymin if ymin is not None else plt.ylim()[0]
+        ymax_use = ymax if ymax is not None else plt.ylim()[1]
+        plt.ylim(ymin_use, ymax_use)
+    elif 'accur' in label:
+        plt.ylim(0., 1.1)
     _save_plot('{}{}'.format(label.replace(' ','_'), trainTag))
     return
 

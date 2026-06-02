@@ -5,6 +5,7 @@
 import os
 import sys
 import gc
+import subprocess
 from pathlib import Path
 import shutil
 import json
@@ -29,6 +30,31 @@ def save_keras_model(model, setup_tag, model_meta):
 	print(f"Saved Keras model to {model_file}")
 	print(f"Saved model metadata to {meta_file}")
 	return model_file, meta_file
+
+
+def save_keras_onnx_model(model, setup_tag, input_dim, opset=11):
+	try:
+		import tensorflow as tf
+		import tf2onnx
+	except Exception as ex:
+		print(f"WARNING: ONNX export skipped (missing TensorFlow/tf2onnx): {ex}")
+		print("Hint: pip install tf2onnx")
+		return None
+
+	onnx_file = Path(f"model{setup_tag}.onnx")
+	input_signature = [tf.TensorSpec([None, input_dim], tf.float32, name="input")]
+	try:
+		tf2onnx.convert.from_keras(
+			model,
+			input_signature=input_signature,
+			opset=opset,
+			output_path=str(onnx_file),
+		)
+		print(f"Saved ONNX model to {onnx_file}")
+		return onnx_file
+	except Exception as ex:
+		print(f"WARNING: ONNX export failed: {ex}")
+		return None
 
 
 def build_model(input_dim, n1, n2, learning_rate, use_relu=True):
@@ -121,12 +147,52 @@ def evaluate_subset(subset_name, subset_inputs, subset_outputs, subset_pred, hex
 	}
 
 
+def build_results_pdf_report(results_dir):
+	report_script = Path(__file__).with_name("build_pdf_report_from_results.py")
+	if not report_script.exists():
+		print(f"WARNING: report builder script not found: {report_script}")
+		return
+
+	cmd = [sys.executable, str(report_script), str(results_dir)]
+	print("Running report builder: {}".format(" ".join(cmd)))
+	proc = subprocess.run(cmd)
+	if proc.returncode != 0:
+		print("WARNING: report builder failed for {}".format(results_dir))
+	else:
+		print("Report PDF generated in {}".format(results_dir))
+
+
+def maybe_restart_with_cpu_fallback(exc):
+	msg = str(exc)
+	low = msg.lower()
+	gpu_init_error = (
+		"cuda" in low
+		or "cudnn" in low
+		or "cublas" in low
+		or "failed call to cuinit" in low
+		or "could not create cudnn handle" in low
+	)
+	if not gpu_init_error:
+		return False
+
+	if os.environ.get("NN_TF_CPU_FALLBACK_USED") == "1":
+		return False
+
+	print("Detected TensorFlow CUDA initialization failure.")
+	print("Re-launching this run in CPU-only mode (CUDA_VISIBLE_DEVICES=-1).")
+	env = dict(os.environ)
+	env["CUDA_VISIBLE_DEVICES"] = "-1"
+	env["NN_TF_CPU_FALLBACK_USED"] = "1"
+	os.execve(sys.executable, [sys.executable] + sys.argv, env)
+	return True
+
+
 def main(argv):
 	default_settings = {
 		"ntested": 15000,
-		"nIters": 70,
-		"inputn1": 120,
-		"inputn2": 120,
+		"nIters": 100,
+		"inputn1": 250,
+		"inputn2": 200,
 		"batch_size": 32,
 		"gBatch": True,
 		"runOnnxTrainEval": True,
@@ -142,6 +208,7 @@ def main(argv):
 	inputn2 = settings["inputn2"]
 	batch_size = settings["batch_size"]
 	gBatch = settings["gBatch"]
+	runOnnxTrainEval = settings["runOnnxTrainEval"]
 	useFullTrainSet = settings["useFullTrainSet"]
 	gTag = settings["gTag"]
 	dataPath = settings["dataPath"]
@@ -166,6 +233,7 @@ def main(argv):
 	print(f"inputn1: {inputn1}")
 	print(f"inputn2: {inputn2}")
 	print(f"batch_size: {batch_size}")
+	print(f"runOnnxTrainEval: {runOnnxTrainEval}")
 	print(f"useFullTrainSet: {useFullTrainSet}")
 	print(f"dataPath: {dataPath}")
 
@@ -266,8 +334,13 @@ def main(argv):
 		import tensorflow as tf
 		model = build_model(dim, n1, n2, learning_rate, use_relu=use_relu)
 	except Exception as ex:
+		if maybe_restart_with_cpu_fallback(ex):
+			return
 		print(f"ERROR: failed to construct TensorFlow model: {ex}")
-		print("Hint: install TensorFlow, e.g. pip install tensorflow")
+		print("Hints:")
+		print("- Force CPU: CUDA_VISIBLE_DEVICES=-1 python3 kerasTFnnRun_chars.py ...")
+		print("- Your GT 730 (compute capability 3.5) is too old for modern TF GPU builds.")
+		print("- Or install a CUDA/driver/TensorFlow combo that is mutually compatible.")
 		return
 
 	if do_plots:
@@ -368,11 +441,11 @@ def main(argv):
 			PlotCost(loss_hist, setup_tag, "Cost Evolution", "red", "dotted")
 		PlotDataAsHisto(train_metrics["results"], "Asimov_results", setup_tag)
 		PlotIndivDataAsHisto(train_metrics["resultsDict"], "Asimov_results", setup_tag)
-		PlotCost(train_metrics["frac"], setup_tag, "train_accuracies", "blue", "solid", "Char ID", "Accuracy")
+		PlotCost(train_metrics["frac"], setup_tag, "train_accuracies", "blue", "solid", "Char ID", "Accuracy", 0.0, 1.1)
 		if len(val_inputs):
 			PlotDataAsHisto(val_metrics["results"], "validation_results", setup_tag)
 			PlotIndivDataAsHisto(val_metrics["resultsDict"], "validation_results", setup_tag)
-			PlotCost(val_metrics["frac"], setup_tag, "validation_accuracies", "green", "solid", "Char ID", "Accuracy")
+			PlotCost(val_metrics["frac"], setup_tag, "validation_accuracies", "green", "solid", "Char ID", "Accuracy", 0.0, 1.1)
 
 	if do_plots:
 		plot_dense_weights(model, setup_tag, suffix="post")
@@ -401,6 +474,10 @@ def main(argv):
 		"dataPath": dataPath,
 	}
 	save_keras_model(model, setup_tag, model_meta)
+	if runOnnxTrainEval:
+		save_keras_onnx_model(model, setup_tag, dim)
+	else:
+		print("ONNX export disabled by runOnnxTrainEval setting")
 
 	del inputs, outputs, train_inputs, train_outputs, train_pred
 	gc.collect()
@@ -426,7 +503,7 @@ def main(argv):
 	if do_plots:
 		PlotDataAsHisto(test_metrics["results"], "test_results", setup_tag)
 		PlotIndivDataAsHisto(test_metrics["resultsDict"], "test_results", setup_tag)
-		PlotCost(test_metrics["frac"], setup_tag, "test_accuracies", "black", "solid", "Char ID", "Accuracy")
+		PlotCost(test_metrics["frac"], setup_tag, "test_accuracies", "black", "solid", "Char ID", "Accuracy", 0.0, 1.1)
 
 		plt.figure()
 		xvals = range(1, len(hexcodes) + 1)
@@ -438,7 +515,7 @@ def main(argv):
 		plt.xlabel("Char ID")
 		plt.ylabel("Accuracy")
 		plt.title("train_vs_validation_vs_test_accuracies")
-		plt.ylim(0.0, 1.0)
+		plt.ylim(0.0, 1.1)
 		plt.legend()
 		plt.savefig(f"train_vs_validation_vs_test_accuracies{setup_tag}.png")
 		plt.savefig(f"train_vs_validation_vs_test_accuracies{setup_tag}.pdf")
@@ -471,6 +548,7 @@ def main(argv):
 			shutil.move(str(artifact), str(results_dir / artifact.name))
 
 	print(f"All artifacts moved to {results_dir}")
+	build_results_pdf_report(results_dir)
 
 
 if __name__ == "__main__":
