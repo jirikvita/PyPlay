@@ -9,7 +9,7 @@ import numpy as np
 
 
 DEFAULT_RESULTS_DIR = Path(
-    "results_n1_80_n2_80_i1_0_i2_3000_train_31_32_33_nImgs_3000_iters_50_bs_32_rate_0.005"
+    "results_n1_80_n2_80_i1_0_i2_3000_train_31_32_33_nImgs_3000_iters_45_bs_32_rate_0.005"
 )
 
 
