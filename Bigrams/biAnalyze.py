@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 
 LETTERS = string.ascii_lowercase
 LETTER_TO_INDEX = {ch: idx for idx, ch in enumerate(LETTERS)}
+BIGRAM_CHARS = string.ascii_lowercase + " "
+BIGRAM_CHAR_TO_INDEX = {ch: idx for idx, ch in enumerate(BIGRAM_CHARS)}
 
 
 def get_pdf_reader_class():
@@ -63,9 +65,14 @@ def strip_accents_to_ascii(text: str) -> str:
     return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
 
+def normalize_case_and_accents(text: str) -> str:
+    # Case-insensitive processing for all PDF text before downstream counting.
+    return strip_accents_to_ascii(text).casefold()
+
+
 def letter_frequency_az(text: str) -> dict[str, float]:
     print("Normalizing text and computing letter frequencies...")
-    text = strip_accents_to_ascii(text).lower()
+    text = normalize_case_and_accents(text)
     letters_only = [ch for ch in text if ch in LETTERS]
     counts = Counter(letters_only)
     total = sum(counts.values())
@@ -76,28 +83,44 @@ def letter_frequency_az(text: str) -> dict[str, float]:
     return {ch: (counts.get(ch, 0) / total) * 100.0 for ch in LETTERS}
 
 
-def normalized_bigram_matrix_az(text: str) -> list[list[float]]:
-    """Build a 26x26 matrix M[x][y] = normalized frequency of bigram x->y."""
-    normalized_text = strip_accents_to_ascii(text).lower()
-    letters_only = [ch for ch in normalized_text if ch in LETTERS]
+def normalize_for_bigrams(text: str) -> list[str]:
+    """Normalize text for bigrams over a..z plus space."""
+    normalized_text = normalize_case_and_accents(text)
+    chars = []
+    for ch in normalized_text:
+        if ch in string.whitespace:
+            chars.append(" ")
+        elif ch in string.ascii_lowercase:
+            chars.append(ch)
+    return chars
 
-    matrix = [[0 for _ in LETTERS] for _ in LETTERS]
+
+def normalized_bigram_matrix_az(text: str) -> list[list[float]]:
+    """Build a matrix M[x][y] = normalized frequency of bigram x->y over a..z + space."""
+    letters_only = normalize_for_bigrams(text)
+
+    matrix = [[0 for _ in BIGRAM_CHARS] for _ in BIGRAM_CHARS]
     if len(letters_only) < 2:
-        return [[0.0 for _ in LETTERS] for _ in LETTERS]
+        return [[0.0 for _ in BIGRAM_CHARS] for _ in BIGRAM_CHARS]
 
     total_bigrams = 0
     for i in range(len(letters_only) - 1):
         x = letters_only[i]
         y = letters_only[i + 1]
-        matrix[LETTER_TO_INDEX[x]][LETTER_TO_INDEX[y]] += 1
+        matrix[BIGRAM_CHAR_TO_INDEX[x]][BIGRAM_CHAR_TO_INDEX[y]] += 1
         total_bigrams += 1
 
     return [[cell / total_bigrams for cell in row] for row in matrix]
 
 
 def plot_bigram_square_matrix(
-    cz_matrix: list[list[float]], en_matrix: list[list[float]]
+    cz_matrix: list[list[float]],
+    en_matrix: list[list[float]],
+    png_path: Path,
+    pdf_path: Path,
 ) -> None:
+    bigram_labels = ["-" if ch == " " else ch for ch in BIGRAM_CHARS]
+
     def _plot_one(ax, matrix: list[list[float]], title: str) -> None:
         xs = []
         ys = []
@@ -106,8 +129,8 @@ def plot_bigram_square_matrix(
         if max_value == 0.0:
             max_value = 1.0
 
-        for x_idx in range(len(LETTERS)):
-            for y_idx in range(len(LETTERS)):
+        for x_idx in range(len(BIGRAM_CHARS)):
+            for y_idx in range(len(BIGRAM_CHARS)):
                 value = matrix[x_idx][y_idx]
                 if value <= 0:
                     continue
@@ -116,12 +139,12 @@ def plot_bigram_square_matrix(
                 sizes.append((value / max_value) * 650.0)
 
         ax.scatter(xs, ys, s=sizes, marker="s", c="blue", alpha=0.7)
-        ax.set_xlim(-0.5, len(LETTERS) - 0.5)
-        ax.set_ylim(-0.5, len(LETTERS) - 0.5)
-        ax.set_xticks(range(len(LETTERS)))
-        ax.set_yticks(range(len(LETTERS)))
-        ax.set_xticklabels(list(LETTERS), fontsize=8)
-        ax.set_yticklabels(list(LETTERS), fontsize=8)
+        ax.set_xlim(-0.5, len(BIGRAM_CHARS) - 0.5)
+        ax.set_ylim(-0.5, len(BIGRAM_CHARS) - 0.5)
+        ax.set_xticks(range(len(BIGRAM_CHARS)))
+        ax.set_yticks(range(len(BIGRAM_CHARS)))
+        ax.set_xticklabels(bigram_labels, fontsize=8)
+        ax.set_yticklabels(bigram_labels, fontsize=8)
         ax.set_xlabel("Y (second letter)")
         ax.set_ylabel("X (first letter)")
         ax.set_title(title)
@@ -132,24 +155,38 @@ def plot_bigram_square_matrix(
     _plot_one(axes[0], cz_matrix, "CZ Bigrams: X->Y")
     _plot_one(axes[1], en_matrix, "ENG Bigrams: X->Y")
     fig.tight_layout()
+    fig.savefig(png_path)
+    fig.savefig(pdf_path)
+    print(f"Saved bigram plot PNG to: {png_path}")
+    print(f"Saved bigram plot PDF to: {pdf_path}")
     plt.show()
 
 
-def plot_histograms(cz_freq: dict[str, float], en_freq: dict[str, float], title: str) -> None:
+def plot_histograms(
+    cz_freq: dict[str, float],
+    en_freq: dict[str, float],
+    title: str,
+    png_path: Path,
+    pdf_path: Path,
+) -> None:
     x = list(range(len(LETTERS)))
     cz_values = [cz_freq[ch] for ch in LETTERS]
     en_values = [en_freq[ch] for ch in LETTERS]
     width = 0.42
 
-    plt.figure(figsize=(14, 6))
-    plt.bar([i - width / 2 for i in x], cz_values, width=width, color="green", label="CZ")
-    plt.bar([i + width / 2 for i in x], en_values, width=width, color="blue", label="ENG")
-    plt.xticks(x, list(LETTERS))
-    plt.ylabel("Relative frequency (%)")
-    plt.xlabel("Letter")
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.bar([i - width / 2 for i in x], cz_values, width=width, color="green", label="CZ")
+    ax.bar([i + width / 2 for i in x], en_values, width=width, color="blue", label="ENG")
+    ax.set_xticks(x, list(LETTERS))
+    ax.set_ylabel("Relative frequency (%)")
+    ax.set_xlabel("Letter")
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(png_path)
+    fig.savefig(pdf_path)
+    print(f"Saved histogram PNG to: {png_path}")
+    print(f"Saved histogram PDF to: {pdf_path}")
     print("Rendering histogram plot...")
     plt.show()
 
@@ -182,7 +219,7 @@ def main() -> int:
     print("Computing frequency distributions...")
     cz_freq = letter_frequency_az(cz_text)
     en_freq = letter_frequency_az(en_text)
-    print("Computing normalized bigram matrices (26x26)...")
+    print("Computing normalized bigram matrices (27x27, includes space)...")
     cz_bigram_matrix = normalized_bigram_matrix_az(cz_text)
     en_bigram_matrix = normalized_bigram_matrix_az(en_text)
 
@@ -191,8 +228,24 @@ def main() -> int:
     for ch in LETTERS:
         print(f"{ch}\t{cz_freq[ch]:.4f}\t{en_freq[ch]:.4f}")
 
-    plot_histograms(cz_freq, en_freq, "a..z Letter Frequency: Czech vs English")
-    plot_bigram_square_matrix(cz_bigram_matrix, en_bigram_matrix)
+    histogram_png = Path("letter_frequency_histogram.png").resolve()
+    histogram_pdf = Path("letter_frequency_histogram.pdf").resolve()
+    bigram_png = Path("bigram_xy_square_matrix.png").resolve()
+    bigram_pdf = Path("bigram_xy_square_matrix.pdf").resolve()
+
+    plot_histograms(
+        cz_freq,
+        en_freq,
+        "a..z Letter Frequency: Czech vs English",
+        histogram_png,
+        histogram_pdf,
+    )
+    plot_bigram_square_matrix(
+        cz_bigram_matrix,
+        en_bigram_matrix,
+        bigram_png,
+        bigram_pdf,
+    )
     print("Done.")
     return 0
 
