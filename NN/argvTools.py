@@ -12,8 +12,8 @@ def parse_argv(argv, defaults):
     try:
         opts, args = getopt.getopt(
             argv[1:],
-            'hbot:i:n:k:m:d:s:',
-            ['help', 'batch', 'runonnxtrain', 'tag=', 'iters=', 'nimgs=', 'klayers=', 'mlayers=', 'datapath=', 'batchsize='],
+            'hboft:i:n:k:m:d:s:',
+            ['help', 'batch', 'runonnxtrain', 'fulltrain', 'tag=', 'iters=', 'nimgs=', 'klayers=', 'mlayers=', 'datapath=', 'batchsize='],
         )
 
         print('Got options:')
@@ -22,7 +22,7 @@ def parse_argv(argv, defaults):
     except getopt.GetoptError:
         print('Parsing...')
         print('Command line argument error!')
-        print('{:} [ -h -b -o --batch --runonnxtrain -tTag --tag="MyCoolTag"]]'.format(argv[0]))
+        print('{:} [ -h -b -o -f --batch --runonnxtrain --fulltrain -tTag --tag="MyCoolTag"]]'.format(argv[0]))
         sys.exit(2)
 
     print('Opts:')
@@ -31,7 +31,7 @@ def parse_argv(argv, defaults):
         print('Processing command line option {} {}'.format(opt, arg))
         if opt in ('-h', '--help'):
             print(
-                'Usage: {:} [ -h -b -o --batch --runonnxtrain -t/--tag="MyCoolTag" -i/--iters=[] -n/--nimgs=[] -k/--klayers=[] -m/--mlayers=[] ]'.format(
+                'Usage: {:} [ -h -b -o -f --batch --runonnxtrain --fulltrain -t/--tag="MyCoolTag" -i/--iters=[] -n/--nimgs=[] -k/--klayers=[] -m/--mlayers=[] ]'.format(
                     argv[0]
                 )
             )
@@ -41,6 +41,9 @@ def parse_argv(argv, defaults):
         elif opt in ('-o', '--runonnxtrain'):
             settings['runOnnxTrainEval'] = True
             print('OK, will run ONNX inference on the training dataset after export')
+        elif opt in ('-f', '--fulltrain'):
+            settings['useFullTrainSet'] = True
+            print('OK, will train on full training set (validation split disabled)')
         elif opt in ('-t', '--tag'):
             settings['gTag'] = arg
             print('OK, using user-defined histograms tag for output pngs {:}'.format(settings['gTag']))

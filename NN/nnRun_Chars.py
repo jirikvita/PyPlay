@@ -188,6 +188,7 @@ def main(argv):
         'batch_size': 64,
         'gBatch': True,
         'runOnnxTrainEval': True,
+        'useFullTrainSet': False,
         'gTag': '',
         'dataPath': os.environ.get('NN_DATA_PATH', 'data/by_class'),
     }
@@ -200,6 +201,7 @@ def main(argv):
     batch_size = settings['batch_size']
     gBatch = settings['gBatch']
     runOnnxTrainEval = settings['runOnnxTrainEval']
+    useFullTrainSet = settings['useFullTrainSet']
     gTag = settings['gTag']
     dataPath = settings['dataPath']
 
@@ -229,6 +231,7 @@ def main(argv):
     print(f'inputn2: {inputn2:}')
     print(f'batch_size: {batch_size:}')
     print(f'runOnnxTrainEval: {runOnnxTrainEval:}')
+    print(f'useFullTrainSet: {useFullTrainSet:}')
     print(f'dataPath: {dataPath}')
 
     # HACK!
@@ -490,6 +493,40 @@ def main(argv):
     #print('Outputs: ', outputs)
     print('*** Train outputs:')
     PrintUnique(outputs)
+
+    n_loaded = len(inputs)
+    if n_loaded == 0:
+        print('ERROR: no training data loaded, stopping.')
+        return
+
+    if useFullTrainSet:
+        train_inputs = inputs
+        train_outputs = outputs
+        val_inputs = np.asarray([], dtype=np.float64)
+        val_outputs = np.asarray([], dtype=np.float64)
+        train_abs_ids = np.arange(i1, i1 + n_loaded)
+        print('Using full training set: {}/{} train, {}/{} validation'.format(
+            len(train_inputs), n_loaded, 0, n_loaded
+        ))
+    else:
+        if n_loaded < 2:
+            print('WARNING: less than 2 training samples loaded; cannot create 20% validation split.')
+            n_val = 0
+        else:
+            n_val = int(round(0.2 * n_loaded))
+            n_val = max(1, min(n_val, n_loaded - 1))
+
+        split_perm = np.random.permutation(n_loaded)
+        val_idx = split_perm[:n_val]
+        train_idx = split_perm[n_val:]
+        train_inputs = inputs[train_idx]
+        train_outputs = outputs[train_idx]
+        val_inputs = inputs[val_idx]
+        val_outputs = outputs[val_idx]
+        train_abs_ids = i1 + train_idx
+        print('Training/Validation split: {}/{} train, {}/{} validation'.format(
+            len(train_inputs), n_loaded, len(val_inputs), n_loaded
+        ))
     
     ##################################################
     #            Step 5: train the model             #
@@ -500,9 +537,9 @@ def main(argv):
     #Iterate through all inputs and find outputs:
     print('+++ Training: Iterating through inputs, finding outputs...{} times +++'.format(i2-i1))
     # Normalize by the actual number of loaded training samples, not per-class image count.
-    n_train = len(inputs)
+    n_train = len(train_inputs)
     if n_train == 0:
-        print('ERROR: no training data loaded, stopping.')
+        print('ERROR: no training samples left after validation split, stopping.')
         return
     if batch_size <= 0:
         print('ERROR: batch_size must be > 0, stopping.')
@@ -521,8 +558,8 @@ def main(argv):
         for ibeg in range(0, n_train, batch_size):
             iend = min(ibeg + batch_size, n_train)
             idx = perm[ibeg:iend]
-            batch_x = inputs[idx]
-            batch_y = outputs[idx]
+            batch_x = train_inputs[idx]
+            batch_y = train_outputs[idx]
             pred, cost_batch = train(batch_x, batch_y)
             # Stop immediately when non-finite values appear to prevent NaN feedback loops.
             if (not np.isfinite(cost_batch)) or (not np.all(np.isfinite(pred))):
@@ -544,8 +581,8 @@ def main(argv):
     Asimov_results = []
     Asimov_resultsDict = {}
     print('+++ The Asimov outputs of the NN are: +++')
-    # Re-evaluate full training set after mini-batch updates.
-    pred = predict(inputs)
+    # Re-evaluate train subset after mini-batch updates.
+    pred = predict(train_inputs)
     classesPrinted = {}
     train_NcorrectDict = {}
     train_NallDict = {}
@@ -564,17 +601,17 @@ def main(argv):
         class_value = nnoutmin + ihex*sep + delta
         value_to_hex[class_value] = hexcode
 
-    for i in range(len(inputs)):
-        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(inputs[i][0],inputs[i][1],pred[i]))
-        if not outputs[i] in classesPrinted:
-            classesPrinted[outputs[i]] = pred[i]
-            print('The Asimov output for true class {} is {:.2f}'.format(outputs[i],pred[i]))
-        if not outputs[i] in  Asimov_resultsDict:
-            Asimov_resultsDict[outputs[i]] = []
+    for i in range(len(train_inputs)):
+        # print('The output for x1={} | stacked_aas={} is {:.2f}'.format(train_inputs[i][0],train_inputs[i][1],pred[i]))
+        if not train_outputs[i] in classesPrinted:
+            classesPrinted[train_outputs[i]] = pred[i]
+            print('The Asimov output for true class {} is {:.2f}'.format(train_outputs[i],pred[i]))
+        if not train_outputs[i] in  Asimov_resultsDict:
+            Asimov_resultsDict[train_outputs[i]] = []
         Asimov_results.append(pred[i])
-        Asimov_resultsDict[outputs[i]].append(pred[i])
-        diff = outputs[i] - pred[i]
-        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - outputs[i]))[1]
+        Asimov_resultsDict[train_outputs[i]].append(pred[i])
+        diff = train_outputs[i] - pred[i]
+        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - train_outputs[i]))[1]
         if not key in train_NallDict:
             train_NallDict[key] = 1
             train_NcorrectDict[key] = 0
@@ -589,16 +626,16 @@ def main(argv):
     Ndetailes = 100
     train_detail_rows = []
     train_detail_count = {hexcode: 0 for hexcode in hexcodes}
-    for i in range(len(inputs)):
-        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - outputs[i]))[1]
+    for i in range(len(train_inputs)):
+        key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - train_outputs[i]))[1]
         if train_detail_count[key] >= Ndetailes:
             continue
         train_detail_rows.append([
-            i1 + i,
+            int(train_abs_ids[i]),
             key,
-            float(outputs[i]),
+            float(train_outputs[i]),
             float(pred[i]),
-            float(outputs[i] - pred[i]),
+            float(train_outputs[i] - pred[i]),
         ])
         train_detail_count[key] = train_detail_count[key] + 1
 
@@ -621,12 +658,55 @@ def main(argv):
     train_total_frac = (train_nCorrect / float(train_nAll)) if train_nAll else 0.
     print('Total TRAIN correct fraction: {}/{} = {}'.format(train_nCorrect, train_nAll, train_total_frac))
 
+    val_results = []
+    val_resultsDict = {}
+    val_fracDict = {hexcode: 0. for hexcode in hexcodes}
+    val_frac = [0. for _ in hexcodes]
+    val_nAll = 0
+    val_nCorrect = 0
+    val_total_frac = 0.
+    if len(val_inputs):
+        print('+++ Evaluating held-out VALIDATION subset (20% of original train pool) +++')
+        val_pred, val_cost = evaluate(val_inputs, val_outputs)
+        val_NallDict = {}
+        val_NcorrectDict = {}
+        for i in range(len(val_inputs)):
+            diff = val_outputs[i] - val_pred[i]
+            key = min(value_to_hex.items(), key=lambda kv: abs(kv[0] - val_outputs[i]))[1]
+            val_nAll = val_nAll + 1
+            if not key in val_NallDict:
+                val_NallDict[key] = 1
+                val_NcorrectDict[key] = 0
+            else:
+                val_NallDict[key] = val_NallDict[key] + 1
+            if not key in val_resultsDict:
+                val_resultsDict[key] = []
+            if abs(diff) < correctCut:
+                val_NcorrectDict[key] = val_NcorrectDict[key] + 1
+                val_nCorrect = val_nCorrect + 1
+            val_resultsDict[key].append(val_pred[i])
+            val_results.append(val_pred[i])
+
+        for hexcode in hexcodes:
+            nall = val_NallDict.get(hexcode, 0)
+            ncorrect = val_NcorrectDict.get(hexcode, 0)
+            val_fracDict[hexcode] = (1.*ncorrect / nall) if nall else 0.
+            val_frac[hexcodes.index(hexcode)] = val_fracDict[hexcode]
+            print('Fraction of correct VALIDATION classification for class {} is {}'.format(hexcode, val_fracDict[hexcode]))
+        val_total_frac = (val_nCorrect / float(val_nAll)) if val_nAll else 0.
+        print('Total VALIDATION correct fraction: {}/{} = {}'.format(val_nCorrect, val_nAll, val_total_frac))
+        print('Validation cost: {}'.format(float(val_cost)))
+
     #print(Asimov_resultsDict)
     if do_plots:
         PlotCost(normcost, setupTag, 'Cost Evolution', 'red', 'dotted')
         PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
         PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
         PlotCost(train_frac, setupTag, 'train_accuracies', 'blue', 'solid', 'Char ID', 'Accuracy')
+        if len(val_inputs):
+            PlotDataAsHisto(val_results, 'validation_results', setupTag)
+            PlotIndivDataAsHisto(val_resultsDict, 'validation_results', setupTag)
+            PlotCost(val_frac, setupTag, 'validation_accuracies', 'green', 'solid', 'Char ID', 'Accuracy')
     
     # print the final weights
     print('*** printing the final weights ***')
@@ -644,6 +724,7 @@ def main(argv):
         'learning_rate': learning_rate,
         'expAmplif': expAmplif,
         'useReLu': useReLu,
+        'useFullTrainSet': useFullTrainSet,
         'hexcodes': hexcodes,
         'cutoffx': cutoffx,
         'cutoffy': cutoffy,
@@ -751,15 +832,17 @@ def main(argv):
         plt.figure()
         xvals = range(1, len(hexcodes)+1)
         plt.plot(xvals, train_frac, 'o', color='blue', linewidth=1, markersize=4, linestyle='solid', label='train')
+        if len(val_inputs):
+            plt.plot(xvals, val_frac, 'o', color='green', linewidth=1, markersize=4, linestyle='solid', label='validation')
         plt.plot(xvals, frac, 'o', color='black', linewidth=1, markersize=4, linestyle='solid', label='test')
         plt.xticks(list(xvals), hexcodes)
         plt.xlabel('Char ID')
         plt.ylabel('Accuracy')
-        plt.title('train_vs_test_accuracies')
+        plt.title('train_vs_validation_vs_test_accuracies')
         plt.ylim(0., 1.)
         plt.legend()
-        plt.savefig(f'train_vs_test_accuracies{setupTag}.png')
-        plt.savefig(f'train_vs_test_accuracies{setupTag}.pdf')
+        plt.savefig(f'train_vs_validation_vs_test_accuracies{setupTag}.png')
+        plt.savefig(f'train_vs_validation_vs_test_accuracies{setupTag}.pdf')
 
     # print to ascii
     sumfrac = sum(frac)
@@ -769,6 +852,8 @@ def main(argv):
         outfile.write(f'{key} : {frac:1.3f}\n')
     outfile.write(f'Sum : {sumfrac:1.3f}\n')
     outfile.write('Total correct fraction: {}/{} = {:1.3f}'.format(nCorrect, nAll, total_frac ) + '\n')
+    if len(val_inputs):
+        outfile.write('Validation total correct fraction: {}/{} = {:1.3f}'.format(val_nCorrect, val_nAll, val_total_frac) + '\n')
     outfile.close()
     
     if do_plots and not no_plot_show:
