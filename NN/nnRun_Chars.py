@@ -160,6 +160,45 @@ def export_onnx_model(ws, bs, setupTag, model_meta):
     print(f'Exported ONNX model to {onnx_file}')
     return onnx_file
 
+
+def plot_confusion_matrix_half_sep(true_outputs, pred_outputs, hexcodes, class_values, subset_name, setup_tag):
+    """Plot confusion matrix using class boundaries at half-distance between expected outputs."""
+    true_arr = np.asarray(true_outputs, dtype=float).reshape(-1)
+    pred_arr = np.asarray(pred_outputs, dtype=float).reshape(-1)
+    if len(true_arr) == 0 or len(pred_arr) == 0:
+        print(f'WARNING: empty arrays for confusion matrix on {subset_name}, skipping plot.')
+        return
+
+    n = min(len(true_arr), len(pred_arr))
+    true_arr = true_arr[:n]
+    pred_arr = pred_arr[:n]
+
+    boundaries = [0.5 * (class_values[i] + class_values[i + 1]) for i in range(len(class_values) - 1)]
+    true_idx = np.digitize(true_arr, boundaries)
+    pred_idx = np.digitize(pred_arr, boundaries)
+
+    ncls = len(hexcodes)
+    cm = np.zeros((ncls, ncls), dtype=int)
+    for it, ip in zip(true_idx, pred_idx):
+        cm[int(it), int(ip)] = cm[int(it), int(ip)] + 1
+
+    plt.figure(figsize=(8, 7))
+    cm_plot = np.log1p(cm.astype(float))
+    plt.imshow(cm_plot, interpolation='nearest', cmap='hot_r')
+    plt.title(f'confusion_matrix_{subset_name}')
+    cbar = plt.colorbar()
+    cbar.set_label('log(1+N)')
+    ticks = np.arange(ncls)
+    plt.xticks(ticks, hexcodes, rotation=45)
+    plt.yticks(ticks, hexcodes)
+    plt.gca().invert_yaxis()
+    plt.xlabel('Predicted class')
+    plt.ylabel('True class')
+    plt.tight_layout()
+    plt.savefig(f'confusion_matrix_{subset_name.lower()}{setup_tag}.png')
+    plt.savefig(f'confusion_matrix_{subset_name.lower()}{setup_tag}.pdf')
+    plt.close()
+
 ########################################################################################
 ########################################################################################
 ########################################################################################
@@ -597,8 +636,10 @@ def main(argv):
     delta = 0.1
     sep = (nnoutmax - nnoutmin) / nhex
     value_to_hex = {}
+    class_values = []
     for ihex, hexcode in enumerate(hexcodes):
         class_value = nnoutmin + ihex*sep + delta
+        class_values.append(class_value)
         value_to_hex[class_value] = hexcode
 
     for i in range(len(train_inputs)):
@@ -703,6 +744,7 @@ def main(argv):
         PlotDataAsHisto(Asimov_results, 'Asimov_results', setupTag)
         PlotIndivDataAsHisto(Asimov_resultsDict, 'Asimov_results', setupTag)
         PlotCost(train_frac, setupTag, 'train_accuracies', 'blue', 'solid', 'Char ID', 'Accuracy')
+        plot_confusion_matrix_half_sep(train_outputs, pred, hexcodes, class_values, 'train', setupTag)
         if len(val_inputs):
             PlotDataAsHisto(val_results, 'validation_results', setupTag)
             PlotIndivDataAsHisto(val_resultsDict, 'validation_results', setupTag)
@@ -828,6 +870,7 @@ def main(argv):
     if do_plots:
         PlotDataAsHisto(test_results, 'test_results', setupTag)
         PlotIndivDataAsHisto(test_resultsDict, 'test_results', setupTag)
+        plot_confusion_matrix_half_sep(test_outputs, test_pred, hexcodes, class_values, 'test', setupTag)
 
         # plot the accuracies:
         PlotCost(frac, setupTag, 'test_accuracies', 'black', 'solid', 'Char ID', 'Accuracy')
