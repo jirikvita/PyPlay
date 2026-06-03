@@ -740,6 +740,8 @@ def main(argv):
     }
     _, meta_file = save_trained_model(ws, bs, setupTag, model_meta)
     onnx_file = export_onnx_model(ws, bs, setupTag, model_meta)
+    results_dir = Path('results') / f'results{setupTag}'
+    results_dir.mkdir(parents=True, exist_ok=True)
 
     if runOnnxTrainEval and onnx_file is not None:
         try:
@@ -747,7 +749,7 @@ def main(argv):
 
             print('+++ running optional ONNX evaluation on TRAIN dataset +++')
             run_onnx_on_same_dataset(
-                results_dir='.',
+                results_dir=results_dir,
                 data_path=dataPath,
                 i1=i1,
                 i2=i2,
@@ -860,8 +862,6 @@ def main(argv):
         plt.show()
 
     # Move generated artifacts safely with Python APIs instead of shell commands.
-    results_dir = Path(f'results{setupTag}')
-    results_dir.mkdir(exist_ok=True)
     for artifact in Path('.').glob(f'*{setupTag}*.*'):
         if artifact.is_file():
             shutil.move(str(artifact), str(results_dir / artifact.name))

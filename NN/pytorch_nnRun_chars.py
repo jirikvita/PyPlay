@@ -552,8 +552,8 @@ def main(argv):
     if do_plots and not no_plot_show:
         plt.show()
 
-    results_dir = Path(f"results{setup_tag}")
-    results_dir.mkdir(exist_ok=True)
+    results_dir = Path("results") / f"results{setup_tag}"
+    results_dir.mkdir(parents=True, exist_ok=True)
     for artifact in Path(".").glob(f"*{setup_tag}*.*"):
         if artifact.is_file():
             shutil.move(str(artifact), str(results_dir / artifact.name))
