@@ -267,11 +267,11 @@ def main(argv):
     print("tag={:}, batch={:}".format(gTag, gBatch))
     hostname = os.environ.get("HOSTNAME", "")
     do_plots = True
-    no_plot_show = gBatch or (hostname == "zubr")
-    if gBatch:
-        print("Batch mode enabled: plots will be saved, interactive display disabled.")
-    elif hostname == "zubr":
-        print("Running on zubr: interactive plot display disabled (saving files only).")
+    no_plot_show = True
+    if os.environ.get("NN_SHOW_PLOTS", "0") == "1":
+        no_plot_show = False
+    if no_plot_show:
+        print("Default plot behavior: save files only (set NN_SHOW_PLOTS=1 to display).")
 
     print(f"nIters: {nIters}")
     print(f"ntested: {ntested}")

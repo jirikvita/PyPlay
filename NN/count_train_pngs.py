@@ -88,6 +88,7 @@ def plot_class_counts(
     first_images: dict[str, Path | None],
     png_path: Path,
     pdf_path: Path,
+    show: bool = False,
 ) -> None:
     classes = list(counts.keys())
     values = list(counts.values())
@@ -126,7 +127,10 @@ def plot_class_counts(
     fig.tight_layout()
     fig.savefig(png_path)
     fig.savefig(pdf_path)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 def plot_class_examples_table(
@@ -134,6 +138,7 @@ def plot_class_examples_table(
     first_images: dict[str, Path | None],
     png_path: Path,
     pdf_path: Path,
+    show: bool = False,
 ) -> None:
     classes = list(counts.keys())
     if not classes:
@@ -181,7 +186,10 @@ def plot_class_examples_table(
     fig.tight_layout()
     fig.savefig(png_path)
     fig.savefig(pdf_path)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 def main() -> None:
@@ -215,6 +223,11 @@ def main() -> None:
         default="39",
         help="End class name (inclusive). Default: 39",
     )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Show plots interactively (default: save only)",
+    )
     args = parser.parse_args()
 
     train_dir = Path(args.train_dir).resolve()
@@ -243,7 +256,7 @@ def main() -> None:
         total += n
     print(f"TOTAL: {total}")
     print(f"Wrote class dictionary to: {output_path}")
-    plot_class_counts(counts, first_images, plot_png_path, plot_pdf_path)
+    plot_class_counts(counts, first_images, plot_png_path, plot_pdf_path, show=args.show)
     print(f"Saved plot PNG to: {plot_png_path}")
     print(f"Saved plot PDF to: {plot_pdf_path}")
     plot_class_examples_table(
@@ -251,6 +264,7 @@ def main() -> None:
         first_images,
         table_png_path,
         table_pdf_path,
+        show=args.show,
     )
     print(f"Saved table PNG to: {table_png_path}")
     print(f"Saved table PDF to: {table_pdf_path}")
