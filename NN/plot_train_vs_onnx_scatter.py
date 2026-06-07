@@ -81,7 +81,7 @@ def plot_train_vs_onnx_scatter(
     train_csv=None,
     onnx_csv=None,
     out_prefix="train_vs_onnx_scatter",
-    show=True,
+    show=False,
 ):
     results_dir = Path(results_dir)
     if not results_dir.exists():
@@ -135,9 +135,17 @@ def main():
         default="train_vs_onnx_scatter",
         help="Output file prefix (without extension)",
     )
+    parser.set_defaults(show=False)
+    parser.add_argument(
+        "--show",
+        dest="show",
+        action="store_true",
+        help="Show plot interactively (default: save only)",
+    )
     parser.add_argument(
         "--no-show",
-        action="store_true",
+        dest="show",
+        action="store_false",
         help="Do not show plot interactively",
     )
     args = parser.parse_args()
@@ -147,7 +155,7 @@ def main():
         train_csv=args.train_csv,
         onnx_csv=args.onnx_csv,
         out_prefix=args.out_prefix,
-        show=(not args.no_show),
+        show=args.show,
     )
 
 
